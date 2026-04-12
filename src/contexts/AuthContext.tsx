@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
-import { supabase } from '@/integrations/supabase/client'
+import { supabase } from '../integrations/supabase/client'
 
 interface Profile {
   id: string
@@ -48,11 +48,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Listener de mudanças de auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         setSession(session)
         setUser(session?.user ?? null)
-        if (session?.user) await loadProfile(session.user.id)
-        else {
+        
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+          if (session?.user) await loadProfile(session.user.id)
+        } else if (event === 'SIGNED_OUT') {
           setProfile(null)
           setCompany(null)
           setLoading(false)
@@ -65,26 +67,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function loadProfile(userId: string) {
     try {
-      const { data: profileData, error } = await supabase
+      // Busca perfil sem usar .single() para evitar erro 406 se não existir
+      const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single()
 
-      if (error || !profileData) {
-        setLoading(false)
+      if (profileError || !profiles || profiles.length === 0) {
+        setProfile(null)
+        setCompany(null)
         return
       }
 
+      const profileData = profiles[0]
       setProfile(profileData)
 
-      const { data: companyData } = await supabase
+      // Busca empresa
+      const { data: companies, error: companyError } = await supabase
         .from('companies')
         .select('id, name, status, plan, trial_ends_at')
         .eq('id', profileData.company_id)
-        .single()
 
-      setCompany(companyData)
+      if (!companyError && companies && companies.length > 0) {
+        setCompany(companies[0])
+      }
+    } catch (err) {
+      console.error('Erro ao carregar perfil:', err)
     } finally {
       setLoading(false)
     }

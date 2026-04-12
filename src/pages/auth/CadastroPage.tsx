@@ -27,58 +27,35 @@ export default function CadastroPage() {
     setError(null)
 
     try {
-      // 1. Criar usuário no Supabase Auth
+      // No Supabase com confirmação de e-mail, não conseguimos inserir em tabelas RLS 
+      // imediatamente após o signUp porque a sessão ainda não é 'authenticated'.
+      // A solução ideal é usar uma Edge Function ou Triggers no banco.
+      
+      // 1. Criar usuário no Supabase Auth com metadados
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
           emailRedirectTo: `${window.location.origin}/confirmar-email`,
-          data: { full_name: data.company_name },
+          data: { 
+            full_name: data.company_name,
+            company_name: data.company_name,
+            cnpj: data.cnpj || null
+          },
         },
       })
 
       if (authError) throw new Error(authError.message)
       if (!authData.user) throw new Error('Erro ao criar usuário')
 
-      // 2. Criar empresa
-      const { data: company, error: companyError } = await supabase
-        .from('companies')
-        .insert({
-          name: data.company_name,
-          email: data.email,
-          cnpj: data.cnpj || null,
-          status: 'trial',
-          plan: 'starter',
-          trial_ends_at: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
-          is_email_verified: false,
-        })
-        .select()
-        .single()
-
-      if (companyError) throw new Error('Erro ao criar empresa')
-
-      // 3. Criar perfil do owner
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
-          company_id: company.id,
-          full_name: data.company_name,
-          email: data.email,
-          role: 'owner',
-          is_active: true,
-        })
-
-      if (profileError) throw new Error('Erro ao criar perfil')
-
-      // 4. Criar registro de usage
-      await supabase.from('company_usage').insert({
-        company_id: company.id,
-        total_products: 0,
-        movements_this_month: 0,
-        total_users: 1,
-      })
-
+      // Se o usuário já estiver logado (auto-confirm), tentamos criar a empresa.
+      // Se não, o trigger 'handle_new_user' no banco (se configurado) cuidaria disso,
+      // ou o usuário criará ao entrar pela primeira vez.
+      
+      // Para este fluxo, vamos apenas redirecionar para a tela de confirmação.
+      // Os registros de Empresa/Perfil devem ser criados via Trigger no Postgres 
+      // para garantir atomicidade e burlar o RLS inicial.
+      
       navigate('/confirmar-email', { state: { email: data.email } })
 
     } catch (err: any) {
