@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../integrations/supabase/client'
 import { toast } from 'sonner'
@@ -37,9 +37,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [company, setCompany] = useState<Company | null>(null)
   const [loading, setLoading] = useState(true)
+  const subscriptionRef = useRef<any>(null)
 
   useEffect(() => {
     let mounted = true
+
+    // Limpar subscription anterior se existir
+    if (subscriptionRef.current) {
+      subscriptionRef.current.unsubscribe()
+      subscriptionRef.current = null
+    }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return
@@ -63,9 +70,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     )
 
+    subscriptionRef.current = subscription
+
     return () => {
       mounted = false
-      subscription.unsubscribe()
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe()
+        subscriptionRef.current = null
+      }
     }
   }, [])
 
