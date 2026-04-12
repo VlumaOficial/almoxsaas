@@ -62,6 +62,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null)
           setCompany(null)
           setLoading(false)
+        } else {
+          // Para outros eventos (TOKEN_REFRESHED, USER_UPDATED, etc.)
+          // garantir que loading seja desativado
+          setLoading(false)
         }
       }
     )
