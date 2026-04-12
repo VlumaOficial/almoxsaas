@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../integrations/supabase/client'
 import { toast } from 'sonner'
@@ -37,53 +37,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [company, setCompany] = useState<Company | null>(null)
   const [loading, setLoading] = useState(true)
-  const subscriptionRef = useRef<any>(null)
 
   useEffect(() => {
-    // Limpar subscription anterior se existir
-    if (subscriptionRef.current) {
-      subscriptionRef.current.unsubscribe()
-      subscriptionRef.current = null
-    }
+    let mounted = true
 
-    // Sessão inicial
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return
       setSession(session)
       setUser(session?.user ?? null)
-      if (session?.user) {
-        loadProfile(session.user.id)
-      } else {
-        setLoading(false)
-      }
+      if (session?.user) loadProfile(session.user.id)
+      else setLoading(false)
     })
 
-    // Listener de mudanças de auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_event, session) => {
+        if (!mounted) return
         setSession(session)
         setUser(session?.user ?? null)
-        
-        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-          if (session?.user) await loadProfile(session.user.id)
-        } else if (event === 'SIGNED_OUT') {
+        if (session?.user) await loadProfile(session.user.id)
+        else {
           setProfile(null)
           setCompany(null)
-          setLoading(false)
-        } else {
-          // Para outros eventos (TOKEN_REFRESHED, USER_UPDATED, etc.)
-          // garantir que loading seja desativado
           setLoading(false)
         }
       }
     )
 
-    subscriptionRef.current = subscription
-
     return () => {
-      if (subscriptionRef.current) {
-        subscriptionRef.current.unsubscribe()
-        subscriptionRef.current = null
-      }
+      mounted = false
+      subscription.unsubscribe()
     }
   }, [])
 

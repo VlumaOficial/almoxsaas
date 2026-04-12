@@ -8,7 +8,7 @@ export default defineConfig(() => ({
     host: "::",
     port: 8080,
   },
-  plugins: [dyadComponentTagger(), react()],
+  plugins: [dyadComponentTagger(), react({ strictMode: false })],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
