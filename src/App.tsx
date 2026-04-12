@@ -18,6 +18,8 @@ import NovaSenhaPage      from './pages/auth/NovaSenhaPage'
 import DashboardPage from './pages/DashboardPage'
 import ProductsPage from './pages/ProductsPage'
 import CategoriesPage from './pages/CategoriesPage'
+import WarehousesPage from './pages/WarehousesPage'
+import SuppliersPage from './pages/SuppliersPage'
 import PlanosPage from './pages/PlanosPage'
 
 // Placeholders para fases futuras
@@ -56,9 +58,9 @@ export default function App() {
                 <Route path="/produtos"      element={<ProductsPage />} />
                 <Route path="/movimentacoes" element={<PlaceholderPage name="Movimentações" />} />
                 <Route path="/estoque"       element={<PlaceholderPage name="Estoque" />} />
-                <Route path="/almoxarifados" element={<PlaceholderPage name="Almoxarifados" />} />
+                <Route path="/almoxarifados" element={<WarehousesPage />} />
                 <Route path="/categorias"    element={<CategoriesPage />} />
-                <Route path="/fornecedores"  element={<PlaceholderPage name="Fornecedores" />} />
+                <Route path="/fornecedores"  element={<SuppliersPage />} />
                 <Route path="/usuarios"      element={<PlaceholderPage name="Usuários" />} />
                 <Route path="/configuracoes" element={<PlaceholderPage name="Configurações" />} />
                 <Route path="/admin"         element={<PlaceholderPage name="Admin Global" />} />
