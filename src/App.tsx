@@ -16,6 +16,7 @@ import NovaSenhaPage      from './pages/auth/NovaSenhaPage'
 
 // Páginas internas
 import DashboardPage from './pages/DashboardPage'
+import ProductsPage from './pages/ProductsPage'
 import CategoriesPage from './pages/CategoriesPage'
 import PlanosPage from './pages/PlanosPage'
 
@@ -52,7 +53,7 @@ export default function App() {
               {/* Rotas protegidas com AppLayout */}
               <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
                 <Route path="/dashboard"     element={<DashboardPage />} />
-                <Route path="/produtos"      element={<PlaceholderPage name="Produtos" />} />
+                <Route path="/produtos"      element={<ProductsPage />} />
                 <Route path="/movimentacoes" element={<PlaceholderPage name="Movimentações" />} />
                 <Route path="/estoque"       element={<PlaceholderPage name="Estoque" />} />
                 <Route path="/almoxarifados" element={<PlaceholderPage name="Almoxarifados" />} />
