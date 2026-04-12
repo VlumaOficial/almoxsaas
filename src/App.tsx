@@ -12,6 +12,7 @@ import ConfirmarEmailPage from './pages/auth/ConfirmarEmailPage'
 import RecuperarSenhaPage from './pages/auth/RecuperarSenhaPage'
 import NovaSenhaPage      from './pages/auth/NovaSenhaPage'
 import DashboardPage      from './pages/DashboardPage'
+import PlanosPage         from './pages/PlanosPage'
 
 const queryClient = new QueryClient();
 
@@ -42,6 +43,7 @@ export default function App() {
               <Route path="/dashboard" element={
                 <AuthGuard><DashboardPage /></AuthGuard>
               } />
+              <Route path="/planos" element={<PlanosPage />} />
 
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/login" replace />} />

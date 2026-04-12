@@ -21,9 +21,30 @@ export function AuthGuard({ children, requireRoles }: AuthGuardProps) {
     )
   }
 
-  // Não autenticado → login
-  if (!session || !profile) {
+  // Não autenticado no Supabase Auth → login
+  if (!session) {
     return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  // Autenticado mas sem perfil → Evita loop infinito permitindo ficar no login ou dashboard com erro
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+        <div className="max-w-md w-full bg-white rounded-xl border border-slate-200 p-8 text-center shadow-sm">
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Perfil não encontrado</h2>
+          <p className="text-slate-500 mb-6 text-sm">
+            Sua conta de acesso existe, mas não encontramos seus dados de perfil ou empresa. 
+            Isso pode acontecer se o cadastro não foi concluído corretamente.
+          </p>
+          <button 
+            onClick={() => window.location.href = '/login'}
+            className="text-blue-700 font-medium hover:underline text-sm"
+          >
+            Tentar fazer login novamente
+          </button>
+        </div>
+      </div>
+    )
   }
 
   // Empresa bloqueada → planos
@@ -49,7 +70,7 @@ export function AuthGuard({ children, requireRoles }: AuthGuardProps) {
 
 // Guard reverso: redireciona autenticados para fora do login
 export function GuestGuard({ children }: { children: React.ReactNode }) {
-  const { session, loading } = useAuth()
+  const { session, profile, loading } = useAuth()
 
   if (loading) {
     return (
@@ -59,7 +80,9 @@ export function GuestGuard({ children }: { children: React.ReactNode }) {
     )
   }
 
-  if (session) return <Navigate to="/dashboard" replace />
+  // Só redireciona para o dashboard se tiver SESSÃO e PERFIL
+  // Se tiver sessão mas não perfil, deixa ele no login para evitar o loop
+  if (session && profile) return <Navigate to="/dashboard" replace />
 
   return <>{children}</>
 }
