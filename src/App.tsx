@@ -1,27 +1,54 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+import { TooltipProvider } from "./components/ui/tooltip";
+import { Toaster } from "./components/ui/toaster";
+import { Toaster as Sonner } from "./components/ui/sonner";
+import { AuthProvider } from './contexts/AuthContext'
+import { AuthGuard, GuestGuard } from './components/auth/AuthGuard'
+
+import LoginPage          from './pages/auth/LoginPage'
+import CadastroPage       from './pages/auth/CadastroPage'
+import ConfirmarEmailPage from './pages/auth/ConfirmarEmailPage'
+import RecuperarSenhaPage from './pages/auth/RecuperarSenhaPage'
+import NovaSenhaPage      from './pages/auth/NovaSenhaPage'
+import DashboardPage      from './pages/DashboardPage'
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              {/* Rota raiz → redireciona para login */}
+              <Route path="/" element={<Navigate to="/login" replace />} />
 
-export default App;
+              {/* Rotas públicas (apenas para não autenticados) */}
+              <Route path="/login" element={
+                <GuestGuard><LoginPage /></GuestGuard>
+              } />
+              <Route path="/cadastro" element={
+                <GuestGuard><CadastroPage /></GuestGuard>
+              } />
+              <Route path="/confirmar-email" element={<ConfirmarEmailPage />} />
+              <Route path="/recuperar-senha" element={<RecuperarSenhaPage />} />
+              <Route path="/nova-senha" element={<NovaSenhaPage />} />
+
+              {/* Rotas protegidas */}
+              <Route path="/dashboard" element={
+                <AuthGuard><DashboardPage /></AuthGuard>
+              } />
+
+              {/* Fallback */}
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  )
+}
