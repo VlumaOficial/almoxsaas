@@ -16,6 +16,7 @@ import NovaSenhaPage      from './pages/auth/NovaSenhaPage'
 
 // Páginas internas
 import DashboardPage from './pages/DashboardPage'
+import CategoriesPage from './pages/CategoriesPage'
 import PlanosPage from './pages/PlanosPage'
 
 // Placeholders para fases futuras
@@ -55,7 +56,7 @@ export default function App() {
                 <Route path="/movimentacoes" element={<PlaceholderPage name="Movimentações" />} />
                 <Route path="/estoque"       element={<PlaceholderPage name="Estoque" />} />
                 <Route path="/almoxarifados" element={<PlaceholderPage name="Almoxarifados" />} />
-                <Route path="/categorias"    element={<PlaceholderPage name="Categorias" />} />
+                <Route path="/categorias"    element={<CategoriesPage />} />
                 <Route path="/fornecedores"  element={<PlaceholderPage name="Fornecedores" />} />
                 <Route path="/usuarios"      element={<PlaceholderPage name="Usuários" />} />
                 <Route path="/configuracoes" element={<PlaceholderPage name="Configurações" />} />
