@@ -56,10 +56,16 @@ export default function CadastroPage() {
       // Os registros de Empresa/Perfil devem ser criados via Trigger no Postgres 
       // para garantir atomicidade e burlar o RLS inicial.
       
+      // NOTA: Se futuramente INSERTs diretos forem adicionados aqui, use try-catch aninhado
+      // com signOut() no catch para fazer rollback e evitar usuários órfãos.
+      
       navigate('/confirmar-email', { state: { email: data.email } })
 
     } catch (err: any) {
-      setError(err.message || 'Ocorreu um erro. Tente novamente.')
+      // Rollback: se houver erro após criar usuário Auth, fazer signOut para evitar usuário órfão
+      await supabase.auth.signOut()
+      
+      setError(err.message || 'Ocorreu um erro ao criar sua conta. Tente novamente.')
     } finally {
       setLoading(false)
     }
