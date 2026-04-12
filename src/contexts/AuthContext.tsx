@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../integrations/supabase/client'
 import { toast } from 'sonner'
@@ -37,8 +37,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [company, setCompany] = useState<Company | null>(null)
   const [loading, setLoading] = useState(true)
+  const subscriptionRef = useRef<any>(null)
 
   useEffect(() => {
+    // Limpar subscription anterior se existir
+    if (subscriptionRef.current) {
+      subscriptionRef.current.unsubscribe()
+      subscriptionRef.current = null
+    }
+
     // Sessão inicial
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
@@ -70,7 +77,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     )
 
-    return () => subscription.unsubscribe()
+    subscriptionRef.current = subscription
+
+    return () => {
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe()
+        subscriptionRef.current = null
+      }
+    }
   }, [])
 
   async function loadProfile(userId: string) {
