@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../integrations/supabase/client'
 import { toast } from 'sonner'
@@ -37,32 +37,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [company, setCompany] = useState<Company | null>(null)
   const [loading, setLoading] = useState(true)
-  const subscriptionRef = useRef<any>(null)
 
   useEffect(() => {
     let mounted = true
 
-    // Limpar subscription anterior se existir
-    if (subscriptionRef.current) {
-      subscriptionRef.current.unsubscribe()
-      subscriptionRef.current = null
-    }
-
+    // Inicializa sessão imediatamente
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return
       setSession(session)
       setUser(session?.user ?? null)
-      if (session?.user) loadProfile(session.user.id)
-      else setLoading(false)
+      if (session?.user) {
+        loadProfile(session.user.id)
+      } else {
+        setLoading(false) // <- crítico: libera o loading imediatamente
+      }
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         if (!mounted) return
         setSession(session)
         setUser(session?.user ?? null)
-        if (session?.user) await loadProfile(session.user.id)
-        else {
+        if (session?.user) {
+          loadProfile(session.user.id)
+        } else {
           setProfile(null)
           setCompany(null)
           setLoading(false)
@@ -70,14 +68,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     )
 
-    subscriptionRef.current = subscription
-
     return () => {
       mounted = false
-      if (subscriptionRef.current) {
-        subscriptionRef.current.unsubscribe()
-        subscriptionRef.current = null
-      }
+      subscription.unsubscribe()
     }
   }, [])
 
@@ -91,10 +84,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profileError || !profiles || profiles.length === 0) {
         setProfile(null)
         setCompany(null)
+        setLoading(false)
         return
       }
 
-      const profileData = profiles[0]
+      const profileData = profiles[0] as Profile
       setProfile(profileData)
 
       const { data: companies, error: companyError } = await supabase
@@ -103,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('id', profileData.company_id)
 
       if (!companyError && companies && companies.length > 0) {
-        setCompany(companies[0])
+        setCompany(companies[0] as Company)
       }
     } catch (err) {
       console.error('Erro ao carregar perfil:', err)
