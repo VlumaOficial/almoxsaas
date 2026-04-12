@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../integrations/supabase/client'
+import { toast } from 'sonner'
 
 interface Profile {
   id: string
@@ -42,8 +43,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
-      if (session?.user) loadProfile(session.user.id)
-      else setLoading(false)
+      if (session?.user) {
+        loadProfile(session.user.id)
+      } else {
+        setLoading(false)
+      }
     })
 
     // Listener de mudanças de auth
@@ -67,7 +71,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function loadProfile(userId: string) {
     try {
-      // Busca perfil sem usar .single() para evitar erro 406 se não existir
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -82,7 +85,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const profileData = profiles[0]
       setProfile(profileData)
 
-      // Busca empresa
       const { data: companies, error: companyError } = await supabase
         .from('companies')
         .select('id, name, status, plan, trial_ends_at')
@@ -99,9 +101,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
-    await supabase.auth.signOut()
-    setProfile(null)
-    setCompany(null)
+    try {
+      setLoading(true)
+      await supabase.auth.signOut()
+      // Limpeza manual garantida
+      setSession(null)
+      setUser(null)
+      setProfile(null)
+      setCompany(null)
+      toast.success('Sessão encerrada com sucesso')
+    } catch (error) {
+      console.error('Erro ao sair:', error)
+      toast.error('Erro ao encerrar sessão')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

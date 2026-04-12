@@ -74,7 +74,7 @@ export function Topbar({ title }: TopbarProps) {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="cursor-pointer text-red-600 focus:text-red-600"
-            onClick={signOut}
+            onSelect={() => signOut()}
           >
             <LogOut size={14} className="mr-2" /> Sair
           </DropdownMenuItem>
