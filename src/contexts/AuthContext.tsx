@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../integrations/supabase/client'
 import { toast } from 'sonner'
@@ -26,7 +26,6 @@ interface AuthContextType {
   profile: Profile | null
   company: Company | null
   loading: boolean
-  initializing: boolean
   signOut: () => Promise<void>
 }
 
@@ -38,32 +37,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [company, setCompany] = useState<Company | null>(null)
   const [loading, setLoading] = useState(true)
-  const [initializing, setInitializing] = useState(true) // <- novo
+  const profileLoading = useRef(false) // evita chamadas duplas
 
   useEffect(() => {
     let mounted = true
 
+    // 1. Verifica sessão existente
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
-        loadProfile(session.user.id).finally(() => {
-          if (mounted) setInitializing(false) // <- só libera após carregar perfil
-        })
+        loadProfile(session.user.id, mounted)
       } else {
         setLoading(false)
-        setInitializing(false)
       }
     })
 
+    // 2. Escuta mudanças de auth (login, logout, confirmação de email)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (!mounted || initializing) return // <- ignora durante init
+      async (event, session) => {
+        if (!mounted) return
+
         setSession(session)
         setUser(session?.user ?? null)
+
         if (session?.user) {
-          loadProfile(session.user.id)
+          // Evita chamada dupla com getSession
+          if (!profileLoading.current) {
+            await loadProfile(session.user.id, mounted)
+          }
         } else {
           setProfile(null)
           setCompany(null)
@@ -78,34 +81,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  async function loadProfile(userId: string) {
+  async function loadProfile(userId: string, mounted: boolean = true) {
+    if (profileLoading.current) return
+    profileLoading.current = true
+
     try {
-      const { data: profiles, error: profileError } = await supabase
+      const { data: profiles, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
 
-      if (profileError || !profiles || profiles.length === 0) {
+      if (!mounted) return
+
+      if (error || !profiles || profiles.length === 0) {
         setProfile(null)
         setCompany(null)
-        setLoading(false)
         return
       }
 
       const profileData = profiles[0] as Profile
       setProfile(profileData)
 
-      const { data: companies, error: companyError } = await supabase
+      const { data: companies } = await supabase
         .from('companies')
         .select('id, name, status, plan, trial_ends_at')
         .eq('id', profileData.company_id)
 
-      if (!companyError && companies && companies.length > 0) {
+      if (!mounted) return
+
+      if (companies && companies.length > 0) {
         setCompany(companies[0] as Company)
       }
     } catch (err) {
       console.error('Erro ao carregar perfil:', err)
-      setLoading(false)
+    } finally {
+      profileLoading.current = false
+      if (mounted) setLoading(false)
     }
   }
 
@@ -113,12 +124,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true)
       await supabase.auth.signOut()
-      // Limpeza manual garantida
       setSession(null)
       setUser(null)
       setProfile(null)
       setCompany(null)
-      setInitializing(false)
       toast.success('Sessão encerrada com sucesso')
     } catch (error) {
       console.error('Erro ao sair:', error)
@@ -129,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, company, loading, initializing, signOut }}>
+    <AuthContext.Provider value={{ session, user, profile, company, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   )
