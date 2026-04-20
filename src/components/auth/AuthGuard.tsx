@@ -10,6 +10,7 @@ export function AuthGuard({ children, requireRoles }: AuthGuardProps) {
   const { session, profile, company, loading } = useAuth()
   const location = useLocation()
 
+  // Mostra spinner enquanto loading
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -28,7 +29,7 @@ export function AuthGuard({ children, requireRoles }: AuthGuardProps) {
 
   // Autenticado mas sem perfil → Evita loop infinito permitindo ficar no login ou dashboard com erro
   // Só exibe mensagem se loading === false E profile === null para evitar flash visual
-  if (!loading && !profile) {
+  if (!profile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
         <div className="max-w-md w-full bg-white rounded-xl border border-slate-200 p-8 text-center shadow-sm">

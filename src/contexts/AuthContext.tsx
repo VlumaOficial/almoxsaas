@@ -26,6 +26,7 @@ interface AuthContextType {
   profile: Profile | null
   company: Company | null
   loading: boolean
+  initializing: boolean
   signOut: () => Promise<void>
 }
 
@@ -37,25 +38,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [company, setCompany] = useState<Company | null>(null)
   const [loading, setLoading] = useState(true)
+  const [initializing, setInitializing] = useState(true) // <- novo
 
   useEffect(() => {
     let mounted = true
 
-    // Inicializa sessão imediatamente
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!mounted) return
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
-        loadProfile(session.user.id)
+        loadProfile(session.user.id).finally(() => {
+          if (mounted) setInitializing(false) // <- só libera após carregar perfil
+        })
       } else {
-        setLoading(false) // <- crítico: libera o loading imediatamente
+        setLoading(false)
+        setInitializing(false)
       }
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        if (!mounted) return
+        if (!mounted || initializing) return // <- ignora durante init
         setSession(session)
         setUser(session?.user ?? null)
         if (session?.user) {
@@ -101,7 +105,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       console.error('Erro ao carregar perfil:', err)
-    } finally {
       setLoading(false)
     }
   }
@@ -115,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null)
       setProfile(null)
       setCompany(null)
+      setInitializing(false)
       toast.success('Sessão encerrada com sucesso')
     } catch (error) {
       console.error('Erro ao sair:', error)
@@ -125,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, company, loading, signOut }}>
+    <AuthContext.Provider value={{ session, user, profile, company, loading, initializing, signOut }}>
       {children}
     </AuthContext.Provider>
   )
