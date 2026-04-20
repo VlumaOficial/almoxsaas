@@ -27,16 +27,17 @@ export function AuthGuard({ children, requireRoles }: AuthGuardProps) {
   }
 
   // Autenticado mas sem perfil → Evita loop infinito permitindo ficar no login ou dashboard com erro
-  if (!profile) {
+  // Só exibe mensagem se loading === false E profile === null para evitar flash visual
+  if (!loading && !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
         <div className="max-w-md w-full bg-white rounded-xl border border-slate-200 p-8 text-center shadow-sm">
           <h2 className="text-xl font-bold text-slate-900 mb-2">Perfil não encontrado</h2>
           <p className="text-slate-500 mb-6 text-sm">
-            Sua conta de acesso existe, mas não encontramos seus dados de perfil ou empresa. 
+            Sua conta de acesso existe, mas não encontramos seus dados de perfil ou empresa.
             Isso pode acontecer se o cadastro não foi concluído corretamente.
           </p>
-          <button 
+          <button
             onClick={() => window.location.href = '/login'}
             className="text-blue-700 font-medium hover:underline text-sm"
           >
