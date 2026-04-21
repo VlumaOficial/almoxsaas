@@ -12,28 +12,33 @@ export default function ConfirmarEmailPage() {
   const [status, setStatus] = useState<'waiting' | 'confirming' | 'success' | 'error'>('waiting')
 
   useEffect(() => {
-    // Detecta se há token de confirmação na URL (retorno do link do e-mail)
     const hash = window.location.hash
-    if (hash && hash.includes('access_token')) {
+    const search = window.location.search
+
+    // Detecta tanto ?code= (PKCE) quanto #access_token= (implicit)
+    if (search.includes('code=') || hash.includes('access_token')) {
       setStatus('confirming')
 
-      // O Supabase já processa o token automaticamente via onAuthStateChange
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (event, session) => {
           if (event === 'SIGNED_IN' && session) {
             setStatus('success')
-            // Aguarda 1.5s para mostrar feedback e redireciona
             setTimeout(() => {
               navigate('/dashboard', { replace: true })
             }, 1500)
           } else if (event === 'USER_UPDATED') {
             setStatus('success')
             setTimeout(() => {
-              navigate('/login', { replace: true })
+              navigate('/dashboard', { replace: true })
             }, 1500)
           }
         }
       )
+
+      // Troca o code por sessão (necessário no fluxo PKCE)
+      supabase.auth.exchangeCodeForSession(
+        new URLSearchParams(search).get('code') || ''
+      ).catch(console.error)
 
       return () => subscription.unsubscribe()
     }
