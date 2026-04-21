@@ -19,8 +19,8 @@ export function AuthGuard({ children, requireRoles }: AuthGuardProps) {
     path: location.pathname
   })
 
-  // Mostra spinner enquanto carrega OU enquanto tem sessão mas perfil ainda não chegou
-  if (loading || (session && !profile && !loading === false)) {
+  // Mostra spinner se loading OU se tem sessão mas perfil ainda não carregou
+  if (loading || (session && !profile)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-3">
