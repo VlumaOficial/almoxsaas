@@ -27,9 +27,9 @@ export function ProductFilters({
   categories, suppliers
 }: ProductFiltersProps) {
   return (
-    <div className="flex flex-col gap-3">
-      {/* Linha 1: Campo de busca por texto - largura total */}
-      <div className="relative w-full">
+    <div className="flex items-center gap-3">
+      {/* Busca - ocupa o máximo de espaço disponível */}
+      <div className="relative flex-1 min-w-0">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <Input
           placeholder="Buscar por nome ou SKU..."
@@ -38,22 +38,28 @@ export function ProductFilters({
           className="pl-9 w-full"
         />
       </div>
-      {/* Linha 2: Filtros dropdown */}
-      <div className="flex flex-wrap gap-3">
+      {/* Categoria - largura fixa */}
+      <div className="w-48 shrink-0">
         <CategoryCombobox
           categories={categories}
           value={categoryFilter === 'all' ? null : categoryFilter}
           onChange={(val) => onCategoryChange(val || 'all')}
           placeholder="Todas as categorias"
         />
+      </div>
+      {/* Fornecedor - largura fixa */}
+      <div className="w-48 shrink-0">
         <SupplierCombobox
           suppliers={suppliers}
           value={supplierFilter === 'all' ? null : supplierFilter}
           onChange={(val) => onSupplierChange(val || 'all')}
           placeholder="Todos os fornecedores"
         />
+      </div>
+      {/* Status - largura fixa menor */}
+      <div className="w-32 shrink-0">
         <Select value={statusFilter} onValueChange={onStatusChange}>
-          <SelectTrigger className="w-full sm:w-36">
+          <SelectTrigger className="w-full">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>

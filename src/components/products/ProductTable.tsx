@@ -3,6 +3,7 @@ import { Product } from '@/hooks/useProducts'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Pencil, Trash2, Package } from 'lucide-react'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -17,9 +18,15 @@ interface ProductTableProps {
   onEdit: (product: Product) => void
   onDelete: (id: string) => Promise<boolean>
   onToggleStatus: (id: string, is_active: boolean) => Promise<boolean>
+  currentPage: number
+  totalPages: number
+  totalItems: number
+  itemsPerPage: number
+  onPageChange: (page: number) => void
+  onItemsPerPageChange: (items: number) => void
 }
 
-export function ProductTable({ products, loading, onEdit, onDelete, onToggleStatus }: ProductTableProps) {
+export function ProductTable({ products, loading, onEdit, onDelete, onToggleStatus, currentPage, totalPages, totalItems, itemsPerPage, onPageChange, onItemsPerPageChange }: ProductTableProps) {
   const { profile } = useAuth()
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -147,6 +154,34 @@ export function ProductTable({ products, loading, onEdit, onDelete, onToggleStat
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Rodapé com paginação */}
+        {!loading && totalItems > 0 && (
+          <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100">
+            <div className="flex items-center gap-2 text-sm text-slate-500">
+              <span>Itens por página:</span>
+              <Select value={String(itemsPerPage)} onValueChange={(v) => onItemsPerPageChange(Number(v))}>
+                <SelectTrigger className="w-16 h-8"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <span className="text-sm text-slate-500">
+              Mostrando {Math.min((currentPage-1)*itemsPerPage+1, totalItems)} a {Math.min(currentPage*itemsPerPage, totalItems)} de {totalItems} produtos
+            </span>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" onClick={() => onPageChange(1)} disabled={currentPage===1}>«</Button>
+              <Button variant="outline" size="sm" onClick={() => onPageChange(p=>p-1)} disabled={currentPage===1}>‹</Button>
+              <span className="text-sm text-slate-600 px-2">Página {currentPage} de {totalPages}</span>
+              <Button variant="outline" size="sm" onClick={() => onPageChange(p=>p+1)} disabled={currentPage===totalPages}>›</Button>
+              <Button variant="outline" size="sm" onClick={() => onPageChange(totalPages)} disabled={currentPage===totalPages}>»</Button>
+            </div>
           </div>
         )}
       </div>

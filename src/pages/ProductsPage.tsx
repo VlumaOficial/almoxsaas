@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useProducts, Product } from '@/hooks/useProducts'
 import { useCategories } from '@/hooks/useCategories'
 import { useSuppliers } from '@/hooks/useSuppliers'
@@ -23,6 +23,10 @@ export default function ProductsPage() {
   const [supplierFilter, setSupplierFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
 
+  // Estados de paginação
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
+
   function handleEdit(product: Product) {
     setEditingProduct(product)
     setDrawerOpen(true)
@@ -38,6 +42,9 @@ export default function ProductsPage() {
     return createProduct(data)
   }
 
+  // Resetar página ao filtrar
+  useEffect(() => setCurrentPage(1), [search, categoryFilter, supplierFilter, statusFilter])
+
   // Filtragem local
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
@@ -52,6 +59,14 @@ export default function ProductsPage() {
       return matchSearch && matchCategory && matchSupplier && matchStatus
     })
   }, [products, search, categoryFilter, supplierFilter, statusFilter])
+
+  // Aplicar paginação após filtros
+  const totalItems = filteredProducts.length
+  const totalPages = Math.ceil(totalItems / itemsPerPage)
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
 
   return (
     <div className="space-y-6">
@@ -83,11 +98,17 @@ export default function ProductsPage() {
       />
 
       <ProductTable
-        products={filteredProducts}
+        products={paginatedProducts}
         loading={loading}
         onEdit={handleEdit}
         onDelete={deleteProduct}
         onToggleStatus={toggleProductStatus}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage}
+        onPageChange={setCurrentPage}
+        onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1) }}
       />
 
       <ProductDrawer
