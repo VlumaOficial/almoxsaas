@@ -75,16 +75,16 @@ export function ProductTable({ products, loading, onEdit, onDelete, onToggleStat
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
-                  <th className="text-left px-5 py-3 font-medium text-slate-500">Produto</th>
-                  <th className="text-left px-5 py-3 font-medium text-slate-500">SKU</th>
-                  <th className="text-left px-5 py-3 font-medium text-slate-500">Categoria</th>
-                  <th className="text-left px-5 py-3 font-medium text-slate-500">Unidade</th>
-                  <th className="text-right px-5 py-3 font-medium text-slate-500">Est. Mínimo</th>
-                  {canViewCost && <th className="text-right px-5 py-3 font-medium text-slate-500">Preço de custo</th>}
-                  <th className="text-left px-5 py-3 font-medium text-slate-500">Cadastrado por</th>
-                  <th className="text-left px-5 py-3 font-medium text-slate-500">Data</th>
-                  {canEdit && <th className="text-center px-5 py-3 font-medium text-slate-500">Ativo</th>}
-                  {canEdit && <th className="text-right px-5 py-3 font-medium text-slate-500">Ações</th>}
+                  <th className="text-left px-5 py-3 font-medium text-slate-500 whitespace-nowrap">Produto</th>
+                  <th className="text-left px-5 py-3 font-medium text-slate-500 whitespace-nowrap">SKU</th>
+                  <th className="text-left px-5 py-3 font-medium text-slate-500 whitespace-nowrap">Categoria</th>
+                  <th className="text-left px-5 py-3 font-medium text-slate-500 whitespace-nowrap">Unidade</th>
+                  <th className="text-right px-5 py-3 font-medium text-slate-500 whitespace-nowrap">Est. Mínimo</th>
+                  {canViewCost && <th className="text-right px-5 py-3 font-medium text-slate-500 whitespace-nowrap">Preço de custo</th>}
+                  <th className="text-left px-5 py-3 font-medium text-slate-500 whitespace-nowrap">Cadastrado por</th>
+                  <th className="text-left px-5 py-3 font-medium text-slate-500 whitespace-nowrap">Data</th>
+                  {canEdit && <th className="text-center px-5 py-3 font-medium text-slate-500 whitespace-nowrap">Ativo</th>}
+                  {canEdit && <th className="text-right px-5 py-3 font-medium text-slate-500 whitespace-nowrap">Ações</th>}
                 </tr>
               </thead>
               <tbody>
