@@ -27,45 +27,24 @@ export default function CadastroPage() {
     setError(null)
 
     try {
-      // No Supabase com confirmação de e-mail, não conseguimos inserir em tabelas RLS 
-      // imediatamente após o signUp porque a sessão ainda não é 'authenticated'.
-      // A solução ideal é usar uma Edge Function ou Triggers no banco.
-      
-      // 1. Criar usuário no Supabase Auth com metadados
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
           emailRedirectTo: `${window.location.origin}/confirmar-email`,
-          data: { 
-            full_name: data.company_name,
+          data: {
             company_name: data.company_name,
-            cnpj: data.cnpj || null
+            full_name: data.company_name,
           },
         },
       })
 
-      if (authError) throw new Error(authError.message)
-      if (!authData.user) throw new Error('Erro ao criar usuário')
+      if (error) throw new Error(error.message)
 
-      // Se o usuário já estiver logado (auto-confirm), tentamos criar a empresa.
-      // Se não, o trigger 'handle_new_user' no banco (se configurado) cuidaria disso,
-      // ou o usuário criará ao entrar pela primeira vez.
-      
-      // Para este fluxo, vamos apenas redirecionar para a tela de confirmação.
-      // Os registros de Empresa/Perfil devem ser criados via Trigger no Postgres 
-      // para garantir atomicidade e burlar o RLS inicial.
-      
-      // NOTA: Se futuramente INSERTs diretos forem adicionados aqui, use try-catch aninhado
-      // com signOut() no catch para fazer rollback e evitar usuários órfãos.
-      
       navigate('/confirmar-email', { state: { email: data.email } })
 
     } catch (err: any) {
-      // Rollback: se houver erro após criar usuário Auth, fazer signOut para evitar usuário órfão
-      await supabase.auth.signOut()
-      
-      setError(err.message || 'Ocorreu um erro ao criar sua conta. Tente novamente.')
+      setError(err.message || 'Ocorreu um erro. Tente novamente.')
     } finally {
       setLoading(false)
     }
