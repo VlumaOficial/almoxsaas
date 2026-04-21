@@ -18,6 +18,7 @@ export interface Product {
   created_at: string
   category?: { name: string } | null
   supplier?: { name: string } | null
+  creator?: { full_name: string } | null
 }
 
 export interface ProductFormData {
@@ -33,7 +34,7 @@ export interface ProductFormData {
 }
 
 export function useProducts() {
-  const { company } = useAuth()
+  const { company, profile } = useAuth()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -44,11 +45,10 @@ export function useProducts() {
       const { data, error } = await supabase
         .from('products')
         .select(`
-          id, company_id, category_id, supplier_id,
-          name, description, sku, unit, min_stock,
-          cost_price, is_active, created_at,
+          *,
           category:categories(name),
-          supplier:suppliers(name)
+          supplier:suppliers(name),
+          creator:profiles!products_created_by_fkey(full_name)
         `)
         .eq('company_id', company.id)
         .order('name')
@@ -67,7 +67,7 @@ export function useProducts() {
     try {
       const { error } = await supabase
         .from('products')
-        .insert({ ...data, company_id: company.id } as any)
+        .insert({ ...data, company_id: company.id, created_by: profile?.id } as any)
 
       if (error) throw error
       toast.success('Produto criado com sucesso!')
@@ -106,6 +106,17 @@ export function useProducts() {
 
   async function deleteProduct(id: string) {
     try {
+      // Verifica se tem movimentações vinculadas
+      const { count } = await supabase
+        .from('movement_items')
+        .select('id', { count: 'exact', head: true })
+        .eq('product_id', id)
+
+      if (count && count > 0) {
+        toast.error('Produto com movimentações não pode ser excluído. Desative-o.')
+        return false
+      }
+
       const { error } = await supabase
         .from('products')
         .delete()
@@ -116,7 +127,7 @@ export function useProducts() {
       await fetchProducts()
       return true
     } catch (err) {
-      toast.error('Erro ao excluir produto. Verifique se não há movimentações vinculadas.')
+      toast.error('Erro ao excluir produto')
       return false
     }
   }

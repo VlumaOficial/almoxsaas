@@ -18,6 +18,7 @@ import {
   SelectTrigger, SelectValue
 } from '@/components/ui/select'
 import { CategoryModal } from '@/components/categories/CategoryModal'
+import { CategoryCombobox } from '@/components/products/CategoryCombobox'
 import { Plus } from 'lucide-react'
 
 const schema = z.object({
@@ -169,20 +170,12 @@ export function ProductDrawer({ open, onClose, onSubmit, product }: ProductDrawe
                   <Plus size={12} /> Nova categoria
                 </button>
               </div>
-              <Select
-                value={watch('category_id') || 'none'}
-                onValueChange={(val) => setValue('category_id', val === 'none' ? null : val)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem categoria</SelectItem>
-                  {categories.filter(c => c.is_active).map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CategoryCombobox
+                categories={categories.filter(c => c.is_active)}
+                value={watch('category_id')}
+                onChange={(val) => setValue('category_id', val)}
+                placeholder="Selecione uma categoria"
+              />
             </div>
 
             {/* Fornecedor */}

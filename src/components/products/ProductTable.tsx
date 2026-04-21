@@ -81,7 +81,8 @@ export function ProductTable({ products, loading, onEdit, onDelete, onToggleStat
                   <th className="text-left px-5 py-3 font-medium text-slate-500">Unidade</th>
                   <th className="text-right px-5 py-3 font-medium text-slate-500">Est. Mínimo</th>
                   {canViewCost && <th className="text-right px-5 py-3 font-medium text-slate-500">Preço de custo</th>}
-                  <th className="text-left px-5 py-3 font-medium text-slate-500">Cadastrado em</th>
+                  <th className="text-left px-5 py-3 font-medium text-slate-500">Cadastrado por</th>
+                  <th className="text-left px-5 py-3 font-medium text-slate-500">Data</th>
                   {canEdit && <th className="text-center px-5 py-3 font-medium text-slate-500">Ativo</th>}
                   {canEdit && <th className="text-right px-5 py-3 font-medium text-slate-500">Ações</th>}
                 </tr>
@@ -112,6 +113,9 @@ export function ProductTable({ products, loading, onEdit, onDelete, onToggleStat
                         {formatCurrency(product.cost_price)}
                       </td>
                     )}
+                    <td className="px-5 py-3 text-slate-500 text-xs">
+                      {product.creator?.full_name || <span className="text-slate-300">—</span>}
+                    </td>
                     <td className="px-5 py-3 text-slate-500 text-xs">
                       {formatDate(product.created_at)}
                     </td>
