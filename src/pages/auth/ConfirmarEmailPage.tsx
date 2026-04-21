@@ -15,7 +15,13 @@ export default function ConfirmarEmailPage() {
     const hash = window.location.hash
     const search = window.location.search
 
-    // Detecta tanto ?code= (PKCE) quanto #access_token= (implicit)
+    // Detecta erro na URL (link expirado, inválido, etc.)
+    if (search.includes('error=') || hash.includes('error=')) {
+      setStatus('error')
+      return
+    }
+
+    // Detecta token válido
     if (search.includes('code=') || hash.includes('access_token')) {
       setStatus('confirming')
 
@@ -23,26 +29,48 @@ export default function ConfirmarEmailPage() {
         async (event, session) => {
           if (event === 'SIGNED_IN' && session) {
             setStatus('success')
-            setTimeout(() => {
-              navigate('/dashboard', { replace: true })
-            }, 1500)
+            setTimeout(() => navigate('/dashboard', { replace: true }), 1500)
           } else if (event === 'USER_UPDATED') {
             setStatus('success')
-            setTimeout(() => {
-              navigate('/dashboard', { replace: true })
-            }, 1500)
+            setTimeout(() => navigate('/dashboard', { replace: true }), 1500)
           }
         }
       )
 
-      // Troca o code por sessão (necessário no fluxo PKCE)
       supabase.auth.exchangeCodeForSession(
         new URLSearchParams(search).get('code') || ''
-      ).catch(console.error)
+      ).catch(() => setStatus('error'))
 
       return () => subscription.unsubscribe()
     }
   }, [])
+
+  // Tela: erro
+  if (status === 'error') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-8">
+        <div className="w-full max-w-md text-center">
+          <div className="mb-8 flex justify-center">
+            <Logo size="lg" />
+          </div>
+          <div className="bg-white rounded-xl border border-red-200 p-10 shadow-sm">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center">
+                <span className="text-3xl">⚠️</span>
+              </div>
+            </div>
+            <h1 className="text-xl font-bold text-slate-900 mb-2">Link inválido ou expirado</h1>
+            <p className="text-slate-500 text-sm mb-6">
+              O link de confirmação expirou ou já foi utilizado. Faça um novo cadastro.
+            </p>
+            <Link to="/cadastro" className="text-blue-700 font-medium hover:underline text-sm">
+              Voltar ao cadastro
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // Tela: processando confirmação
   if (status === 'confirming' || status === 'success') {
