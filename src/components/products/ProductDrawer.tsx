@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/select'
 import { CategoryModal } from '@/components/categories/CategoryModal'
 import { CategoryCombobox } from '@/components/products/CategoryCombobox'
+import { SupplierCombobox } from '@/components/products/SupplierCombobox'
+import { SupplierModal } from '@/components/products/SupplierModal'
 import { Plus } from 'lucide-react'
 
 const schema = z.object({
@@ -48,8 +50,9 @@ interface ProductDrawerProps {
 export function ProductDrawer({ open, onClose, onSubmit, product }: ProductDrawerProps) {
   const isEditing = !!product
   const { categories, createCategory, fetchCategories } = useCategories()
-  const { suppliers } = useSuppliers()
+  const { suppliers, addSupplier, refresh: refreshSuppliers } = useSuppliers()
   const [categoryModalOpen, setCategoryModalOpen] = useState(false)
+  const [supplierModalOpen, setSupplierModalOpen] = useState(false)
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -93,6 +96,17 @@ export function ProductDrawer({ open, onClose, onSubmit, product }: ProductDrawe
     const success = await createCategory(data)
     if (success) await fetchCategories()
     return success
+  }
+
+  async function handleCreateSupplier(data: { name: string; cnpj?: string; email?: string; phone?: string }) {
+    await addSupplier(data as any)
+    await refreshSuppliers()
+    // Selecionar automaticamente o novo fornecedor
+    const newSupplier = suppliers.find(s => s.name === data.name && s.is_active)
+    if (newSupplier) {
+      setValue('supplier_id', newSupplier.id)
+    }
+    return true
   }
 
   return (
@@ -180,21 +194,20 @@ export function ProductDrawer({ open, onClose, onSubmit, product }: ProductDrawe
 
             {/* Fornecedor */}
             <div className="space-y-1.5">
-              <Label>Fornecedor <span className="text-slate-400">(opcional)</span></Label>
-              <Select
-                value={watch('supplier_id') || 'none'}
-                onValueChange={(val) => setValue('supplier_id', val === 'none' ? null : val)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um fornecedor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem fornecedor</SelectItem>
-                  {suppliers.filter(s => s.is_active).map(s => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center justify-between">
+                <Label>Fornecedor <span className="text-slate-400">(opcional)</span></Label>
+                <button type="button"
+                  onClick={() => setSupplierModalOpen(true)}
+                  className="text-xs text-blue-700 hover:underline flex items-center gap-1">
+                  <Plus size={12} /> Novo fornecedor
+                </button>
+              </div>
+              <SupplierCombobox
+                suppliers={suppliers.filter(s => s.is_active)}
+                value={watch('supplier_id')}
+                onChange={(val) => setValue('supplier_id', val)}
+                placeholder="Selecione um fornecedor"
+              />
             </div>
 
             {/* Status */}
@@ -228,6 +241,13 @@ export function ProductDrawer({ open, onClose, onSubmit, product }: ProductDrawe
         onClose={() => setCategoryModalOpen(false)}
         onSubmit={handleCreateCategory}
         categories={categories}
+      />
+
+      {/* Modal de novo fornecedor inline */}
+      <SupplierModal
+        open={supplierModalOpen}
+        onClose={() => setSupplierModalOpen(false)}
+        onSubmit={handleCreateSupplier}
       />
     </>
   )

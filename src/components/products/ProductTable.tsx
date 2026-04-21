@@ -96,27 +96,27 @@ export function ProductTable({ products, loading, onEdit, onDelete, onToggleStat
                         <p className="text-xs text-slate-400 truncate max-w-xs">{product.description}</p>
                       )}
                     </td>
-                    <td className="px-5 py-3 text-slate-500">
+                    <td className="px-5 py-3 text-slate-500 whitespace-nowrap">
                       {product.sku || <span className="text-slate-300">—</span>}
                     </td>
-                    <td className="px-5 py-3 text-slate-500">
+                    <td className="px-5 py-3 text-slate-500 whitespace-nowrap">
                       {product.category?.name || <span className="text-slate-300">—</span>}
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-5 py-3 whitespace-nowrap">
                       <Badge variant="outline">{product.unit}</Badge>
                     </td>
-                    <td className="px-5 py-3 text-right text-slate-600">
+                    <td className="px-5 py-3 text-right text-slate-600 whitespace-nowrap">
                       {product.min_stock} {product.unit}
                     </td>
                     {canViewCost && (
-                      <td className="px-5 py-3 text-right text-slate-600">
+                      <td className="px-5 py-3 text-right text-slate-600 whitespace-nowrap">
                         {formatCurrency(product.cost_price)}
                       </td>
                     )}
-                    <td className="px-5 py-3 text-slate-500 text-xs">
+                    <td className="px-5 py-3 text-slate-500 text-xs whitespace-nowrap">
                       {product.creator?.full_name || <span className="text-slate-300">—</span>}
                     </td>
-                    <td className="px-5 py-3 text-slate-500 text-xs">
+                    <td className="px-5 py-3 text-slate-500 text-xs whitespace-nowrap">
                       {formatDate(product.created_at)}
                     </td>
                     {canEdit && (
