@@ -52,12 +52,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      setProfile(data as Profile)
+      const profileData = data as Profile
+      setProfile(profileData)
 
       const { data: companyData } = await supabase
         .from('companies')
         .select('id, name, status, plan, trial_ends_at')
-        .eq('id', data.company_id)
+        .eq('id', profileData.company_id)
         .single()
 
       if (companyData) setCompany(companyData as Company)
@@ -72,15 +73,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    // Usa APENAS onAuthStateChange como fonte de verdade
-    // Elimina a corrida entre getSession e onAuthStateChange
+    let mounted = true
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return
+      setSession(session)
+      setUser(session?.user ?? null)
+      if (session?.user) {
+        loadProfile(session.user.id)
+      } else {
+        setLoading(false)
+      }
+    })
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!mounted) return
+        // Ignora INITIAL_SESSION pois getSession já tratou
+        if (event === 'INITIAL_SESSION') return
         setSession(session)
         setUser(session?.user ?? null)
-
         if (session?.user) {
-          await loadProfile(session.user.id)
+          loadProfile(session.user.id)
         } else {
           setProfile(null)
           setCompany(null)
@@ -89,7 +103,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   async function signOut() {
