@@ -24,7 +24,10 @@ export function useCategories() {
     try {
       const { data, error } = await supabase
         .from('categories')
-        .select('*, parent:categories!parent_id(name)')
+        .select(`
+          *,
+          parent:categories!categories_parent_id_fkey(name)
+        `)
         .eq('company_id', company.id)
         .order('name')
 
