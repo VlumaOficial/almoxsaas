@@ -22,9 +22,10 @@ interface CategoryComboboxProps {
   value: string | null
   onChange: (value: string | null) => void
   placeholder?: string
+  noneLabel?: string
 }
 
-export function CategoryCombobox({ categories, value, onChange, placeholder = "Selecione uma categoria" }: CategoryComboboxProps) {
+export function CategoryCombobox({ categories, value, onChange, placeholder = "Selecione uma categoria", noneLabel = "Sem categoria" }: CategoryComboboxProps) {
   const [open, setOpen] = useState(false)
 
   const selected = categories.find(c => c.id === value)
@@ -61,7 +62,7 @@ export function CategoryCombobox({ categories, value, onChange, placeholder = "S
                     value === null ? "opacity-100" : "opacity-0"
                   )}
                 />
-                Sem categoria
+                {noneLabel}
               </CommandItem>
               {categories.map((category) => (
                 <CommandItem

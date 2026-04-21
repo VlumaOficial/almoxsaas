@@ -22,9 +22,10 @@ interface SupplierComboboxProps {
   value: string | null
   onChange: (value: string | null) => void
   placeholder?: string
+  noneLabel?: string
 }
 
-export function SupplierCombobox({ suppliers, value, onChange, placeholder = "Selecione um fornecedor" }: SupplierComboboxProps) {
+export function SupplierCombobox({ suppliers, value, onChange, placeholder = "Selecione um fornecedor", noneLabel = "Sem fornecedor" }: SupplierComboboxProps) {
   const [open, setOpen] = useState(false)
 
   const selected = suppliers.find(s => s.id === value)
@@ -61,7 +62,7 @@ export function SupplierCombobox({ suppliers, value, onChange, placeholder = "Se
                     value === null ? "opacity-100" : "opacity-0"
                   )}
                 />
-                Sem fornecedor
+                {noneLabel}
               </CommandItem>
               {suppliers.map((supplier) => (
                 <CommandItem

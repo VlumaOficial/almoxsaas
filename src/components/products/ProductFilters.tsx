@@ -45,6 +45,7 @@ export function ProductFilters({
           value={categoryFilter === 'all' ? null : categoryFilter}
           onChange={(val) => onCategoryChange(val || 'all')}
           placeholder="Todas as categorias"
+          noneLabel="Todas as categorias"
         />
       </div>
       {/* Fornecedor - largura fixa */}
@@ -54,6 +55,7 @@ export function ProductFilters({
           value={supplierFilter === 'all' ? null : supplierFilter}
           onChange={(val) => onSupplierChange(val || 'all')}
           placeholder="Todos os fornecedores"
+          noneLabel="Todos os fornecedores"
         />
       </div>
       {/* Status - largura fixa menor */}
