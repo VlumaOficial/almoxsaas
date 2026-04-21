@@ -24,15 +24,23 @@ export function useCategories() {
     try {
       const { data, error } = await supabase
         .from('categories')
-        .select(`
-          *,
-          parent:categories!categories_parent_id_fkey(name)
-        `)
+        .select('id, company_id, name, parent_id, is_active, created_at')
         .eq('company_id', company.id)
         .order('name')
 
       if (error) throw error
-      setCategories(data || [])
+
+      // Mapa de id → nome para resolução eficiente
+      const nameMap = new Map((data || []).map(c => [c.id, c.name]))
+
+      const resolved = (data || []).map(cat => ({
+        ...cat,
+        parent: cat.parent_id
+          ? { name: nameMap.get(cat.parent_id) || '' }
+          : null
+      }))
+
+      setCategories(resolved)
     } catch (err) {
       toast.error('Erro ao carregar categorias')
     } finally {
