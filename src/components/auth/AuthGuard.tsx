@@ -10,6 +10,15 @@ export function AuthGuard({ children, requireRoles }: AuthGuardProps) {
   const { session, profile, company, loading } = useAuth()
   const location = useLocation()
 
+  // DEBUG TEMPORÁRIO - remover após identificar o problema
+  console.log('AuthGuard state:', {
+    loading,
+    hasSession: !!session,
+    hasProfile: !!profile,
+    hasCompany: !!company,
+    path: location.pathname
+  })
+
   // Mostra spinner enquanto carrega OU enquanto tem sessão mas perfil ainda não chegou
   if (loading || (session && !profile && !loading === false)) {
     return (
