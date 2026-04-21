@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../integrations/supabase/client'
 import { toast } from 'sonner'
@@ -37,36 +37,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [company, setCompany] = useState<Company | null>(null)
   const [loading, setLoading] = useState(true)
-  const profileLoading = useRef(false) // evita chamadas duplas
+
+  async function loadProfile(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+
+      if (error || !data) {
+        setProfile(null)
+        setCompany(null)
+        return
+      }
+
+      setProfile(data as Profile)
+
+      const { data: companyData } = await supabase
+        .from('companies')
+        .select('id, name, status, plan, trial_ends_at')
+        .eq('id', data.company_id)
+        .single()
+
+      if (companyData) setCompany(companyData as Company)
+
+    } catch (err) {
+      console.error('Erro ao carregar perfil:', err)
+      setProfile(null)
+      setCompany(null)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    let mounted = true
-
-    // 1. Verifica sessão existente
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        loadProfile(session.user.id, mounted)
-      } else {
-        setLoading(false)
-      }
-    })
-
-    // 2. Escuta mudanças de auth (login, logout, confirmação de email)
+    // Usa APENAS onAuthStateChange como fonte de verdade
+    // Elimina a corrida entre getSession e onAuthStateChange
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!mounted) return
-
         setSession(session)
         setUser(session?.user ?? null)
 
         if (session?.user) {
-          // Evita chamada dupla com getSession
-          if (!profileLoading.current) {
-            await loadProfile(session.user.id, mounted)
-          }
+          await loadProfile(session.user.id)
         } else {
           setProfile(null)
           setCompany(null)
@@ -75,54 +89,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     )
 
-    return () => {
-      mounted = false
-      subscription.unsubscribe()
-    }
+    return () => subscription.unsubscribe()
   }, [])
-
-  async function loadProfile(userId: string, mounted: boolean = true) {
-    if (profileLoading.current) return
-    profileLoading.current = true
-
-    try {
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-
-      if (!mounted) return
-
-      if (error || !profiles || profiles.length === 0) {
-        setProfile(null)
-        setCompany(null)
-        return
-      }
-
-      const profileData = profiles[0] as Profile
-      setProfile(profileData)
-
-      const { data: companies } = await supabase
-        .from('companies')
-        .select('id, name, status, plan, trial_ends_at')
-        .eq('id', profileData.company_id)
-
-      if (!mounted) return
-
-      if (companies && companies.length > 0) {
-        setCompany(companies[0] as Company)
-      }
-    } catch (err) {
-      console.error('Erro ao carregar perfil:', err)
-    } finally {
-      profileLoading.current = false
-      if (mounted) setLoading(false)
-    }
-  }
 
   async function signOut() {
     try {
-      setLoading(true)
       await supabase.auth.signOut()
       setSession(null)
       setUser(null)
@@ -132,8 +103,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Erro ao sair:', error)
       toast.error('Erro ao encerrar sessão')
-    } finally {
-      setLoading(false)
     }
   }
 
