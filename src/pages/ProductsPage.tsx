@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useProducts, Product } from '@/hooks/useProducts'
 import { useCategories } from '@/hooks/useCategories'
+import { useSuppliers } from '@/hooks/useSuppliers'
 import { ProductTable } from '@/components/products/ProductTable'
 import { ProductDrawer } from '@/components/products/ProductDrawer'
 import { ProductFilters } from '@/components/products/ProductFilters'
@@ -12,12 +13,14 @@ export default function ProductsPage() {
   const { profile } = useAuth()
   const { products, loading, createProduct, updateProduct, deleteProduct, toggleProductStatus } = useProducts()
   const { categories } = useCategories()
+  const { suppliers } = useSuppliers()
   const canEdit = profile?.role && ['super_admin', 'owner', 'manager'].includes(profile.role)
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [supplierFilter, setSupplierFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
 
   function handleEdit(product: Product) {
@@ -42,12 +45,13 @@ export default function ProductsPage() {
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         (p.sku && p.sku.toLowerCase().includes(search.toLowerCase()))
       const matchCategory = categoryFilter === 'all' || p.category_id === categoryFilter
+      const matchSupplier = supplierFilter === 'all' || p.supplier_id === supplierFilter
       const matchStatus = statusFilter === 'all' ||
         (statusFilter === 'active' && p.is_active) ||
         (statusFilter === 'inactive' && !p.is_active)
-      return matchSearch && matchCategory && matchStatus
+      return matchSearch && matchCategory && matchSupplier && matchStatus
     })
-  }, [products, search, categoryFilter, statusFilter])
+  }, [products, search, categoryFilter, supplierFilter, statusFilter])
 
   return (
     <div className="space-y-6">
@@ -70,9 +74,12 @@ export default function ProductsPage() {
         onSearchChange={setSearch}
         categoryFilter={categoryFilter}
         onCategoryChange={setCategoryFilter}
+        supplierFilter={supplierFilter}
+        onSupplierChange={setSupplierFilter}
         statusFilter={statusFilter}
         onStatusChange={setStatusFilter}
         categories={categories}
+        suppliers={suppliers}
       />
 
       <ProductTable

@@ -1,6 +1,9 @@
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Category } from '@/hooks/useCategories'
+import { Supplier } from '@/hooks/useSuppliers'
+import { CategoryCombobox } from '@/components/products/CategoryCombobox'
+import { SupplierCombobox } from '@/components/products/SupplierCombobox'
 import { Search } from 'lucide-react'
 
 interface ProductFiltersProps {
@@ -8,16 +11,20 @@ interface ProductFiltersProps {
   onSearchChange: (value: string) => void
   categoryFilter: string
   onCategoryChange: (value: string) => void
+  supplierFilter: string
+  onSupplierChange: (value: string) => void
   statusFilter: string
   onStatusChange: (value: string) => void
   categories: Category[]
+  suppliers: Supplier[]
 }
 
 export function ProductFilters({
   search, onSearchChange,
   categoryFilter, onCategoryChange,
+  supplierFilter, onSupplierChange,
   statusFilter, onStatusChange,
-  categories
+  categories, suppliers
 }: ProductFiltersProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-3">
@@ -30,17 +37,18 @@ export function ProductFilters({
           className="pl-9"
         />
       </div>
-      <Select value={categoryFilter} onValueChange={onCategoryChange}>
-        <SelectTrigger className="w-full sm:w-48">
-          <SelectValue placeholder="Todas as categorias" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todas as categorias</SelectItem>
-          {categories.map(c => (
-            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <CategoryCombobox
+        categories={categories}
+        value={categoryFilter === 'all' ? null : categoryFilter}
+        onChange={(val) => onCategoryChange(val || 'all')}
+        placeholder="Todas as categorias"
+      />
+      <SupplierCombobox
+        suppliers={suppliers}
+        value={supplierFilter === 'all' ? null : supplierFilter}
+        onChange={(val) => onSupplierChange(val || 'all')}
+        placeholder="Todos os fornecedores"
+      />
       <Select value={statusFilter} onValueChange={onStatusChange}>
         <SelectTrigger className="w-full sm:w-36">
           <SelectValue placeholder="Status" />
