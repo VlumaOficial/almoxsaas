@@ -10,8 +10,8 @@ export function AuthGuard({ children, requireRoles }: AuthGuardProps) {
   const { session, profile, company, loading } = useAuth()
   const location = useLocation()
 
-  // Mostra spinner enquanto loading
-  if (loading) {
+  // Mostra spinner enquanto carrega OU enquanto tem sessão mas perfil ainda não chegou
+  if (loading || (session && !profile && !loading === false)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-3">
@@ -22,13 +22,12 @@ export function AuthGuard({ children, requireRoles }: AuthGuardProps) {
     )
   }
 
-  // Não autenticado no Supabase Auth → login
+  // Sem sessão → login
   if (!session) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  // Autenticado mas sem perfil → Evita loop infinito permitindo ficar no login ou dashboard com erro
-  // Só exibe mensagem se loading === false E profile === null para evitar flash visual
+  // Tem sessão mas não tem perfil → mostra erro
   if (!profile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
@@ -70,7 +69,6 @@ export function AuthGuard({ children, requireRoles }: AuthGuardProps) {
   return <>{children}</>
 }
 
-// Guard reverso: redireciona autenticados para fora do login
 export function GuestGuard({ children }: { children: React.ReactNode }) {
   const { session, profile, loading } = useAuth()
 
@@ -82,8 +80,6 @@ export function GuestGuard({ children }: { children: React.ReactNode }) {
     )
   }
 
-  // Só redireciona para o dashboard se tiver SESSÃO e PERFIL
-  // Se tiver sessão mas não perfil, deixa ele no login para evitar o loop
   if (session && profile) return <Navigate to="/dashboard" replace />
 
   return <>{children}</>
