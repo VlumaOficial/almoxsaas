@@ -42,7 +42,7 @@ export function useCategories() {
     try {
       const { error } = await supabase
         .from('categories')
-        .insert({ ...data, company_id: company.id, is_active: true })
+        .insert({ ...data, company_id: company.id, is_active: true } as any)
 
       if (error) throw error
       toast.success('Categoria criada com sucesso!')
@@ -54,11 +54,11 @@ export function useCategories() {
     }
   }
 
-  async function updateCategory(id: string, data: { name: string; parent_id?: string | null }) {
+  async function updateCategory(id: string, data: { name: string; parent_id?: string | null; is_active?: boolean }) {
     try {
       const { error } = await supabase
         .from('categories')
-        .update(data)
+        .update(data as any)
         .eq('id', id)
 
       if (error) throw error

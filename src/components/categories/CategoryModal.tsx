@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from '@/components/ui/select'
@@ -16,6 +17,7 @@ import {
 const schema = z.object({
   name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
   parent_id: z.string().nullable().optional(),
+  is_active: z.boolean(),
 })
 
 type FormData = z.infer<typeof schema>
@@ -23,7 +25,7 @@ type FormData = z.infer<typeof schema>
 interface CategoryModalProps {
   open: boolean
   onClose: () => void
-  onSubmit: (data: { name: string; parent_id?: string | null }) => Promise<boolean>
+  onSubmit: (data: { name: string; parent_id?: string | null; is_active?: boolean }) => Promise<boolean>
   category?: Category | null
   categories: Category[]
 }
@@ -37,9 +39,9 @@ export function CategoryModal({ open, onClose, onSubmit, category, categories }:
 
   useEffect(() => {
     if (category) {
-      reset({ name: category.name, parent_id: category.parent_id })
+      reset({ name: category.name, parent_id: category.parent_id, is_active: category.is_active })
     } else {
-      reset({ name: '', parent_id: null })
+      reset({ name: '', parent_id: null, is_active: true })
     }
   }, [category, open])
 
@@ -47,6 +49,7 @@ export function CategoryModal({ open, onClose, onSubmit, category, categories }:
     const success = await onSubmit({
       name: data.name,
       parent_id: data.parent_id || null,
+      is_active: isEditing ? data.is_active : true,
     })
     if (success) onClose()
   }
@@ -92,6 +95,19 @@ export function CategoryModal({ open, onClose, onSubmit, category, categories }:
               </SelectContent>
             </Select>
           </div>
+
+          {isEditing && (
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+              <div>
+                <p className="text-sm font-medium text-slate-900">Categoria ativa</p>
+                <p className="text-xs text-slate-500">Categorias inativas não aparecem na seleção de produtos</p>
+              </div>
+              <Switch
+                checked={watch('is_active')}
+                onCheckedChange={(val) => setValue('is_active', val)}
+              />
+            </div>
+          )}
 
           <DialogFooter className="pt-2">
             <Button type="button" variant="outline" onClick={onClose}>

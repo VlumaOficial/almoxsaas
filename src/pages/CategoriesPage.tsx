@@ -20,7 +20,7 @@ export default function CategoriesPage() {
     setEditingCategory(null)
   }
 
-  async function handleSubmit(data: { name: string; parent_id?: string | null }) {
+  async function handleSubmit(data: { name: string; parent_id?: string | null; is_active?: boolean }) {
     if (editingCategory) {
       return updateCategory(editingCategory.id, data)
     }
