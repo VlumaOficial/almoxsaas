@@ -24,6 +24,26 @@ export function ProductTable({ products, loading, onEdit, onDelete, onToggleStat
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const canEdit = profile?.role && ['super_admin', 'owner', 'manager'].includes(profile.role)
+  const canViewCost = profile?.role && ['super_admin', 'owner', 'manager'].includes(profile.role)
+
+  function formatDate(dateString: string) {
+    const date = new Date(dateString)
+    return date.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  function formatCurrency(value: number | null) {
+    if (value === null) return <span className="text-slate-300">—</span>
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value)
+  }
 
   async function handleDelete() {
     if (!deleteId) return
@@ -60,6 +80,8 @@ export function ProductTable({ products, loading, onEdit, onDelete, onToggleStat
                   <th className="text-left px-5 py-3 font-medium text-slate-500">Categoria</th>
                   <th className="text-left px-5 py-3 font-medium text-slate-500">Unidade</th>
                   <th className="text-right px-5 py-3 font-medium text-slate-500">Est. Mínimo</th>
+                  {canViewCost && <th className="text-right px-5 py-3 font-medium text-slate-500">Preço de custo</th>}
+                  <th className="text-left px-5 py-3 font-medium text-slate-500">Cadastrado em</th>
                   {canEdit && <th className="text-center px-5 py-3 font-medium text-slate-500">Ativo</th>}
                   {canEdit && <th className="text-right px-5 py-3 font-medium text-slate-500">Ações</th>}
                 </tr>
@@ -84,6 +106,14 @@ export function ProductTable({ products, loading, onEdit, onDelete, onToggleStat
                     </td>
                     <td className="px-5 py-3 text-right text-slate-600">
                       {product.min_stock} {product.unit}
+                    </td>
+                    {canViewCost && (
+                      <td className="px-5 py-3 text-right text-slate-600">
+                        {formatCurrency(product.cost_price)}
+                      </td>
+                    )}
+                    <td className="px-5 py-3 text-slate-500 text-xs">
+                      {formatDate(product.created_at)}
                     </td>
                     {canEdit && (
                       <td className="px-5 py-3 text-center">

@@ -35,6 +35,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>
 
 const UNITS = ['un', 'kg', 'g', 'l', 'ml', 'm', 'cm', 'cx', 'pç', 'par', 'rolo', 'pacote']
+const INTEGER_UNITS = ['un', 'cx', 'pç', 'par', 'rolo', 'pacote']
 
 interface ProductDrawerProps {
   open: boolean
@@ -142,7 +143,11 @@ export function ProductDrawer({ open, onClose, onSubmit, product }: ProductDrawe
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="min_stock">Estoque mínimo *</Label>
-                <Input id="min_stock" type="number" step="0.01" min="0"
+                <Input
+                  id="min_stock"
+                  type="number"
+                  step={INTEGER_UNITS.includes(watch('unit')) ? '1' : '0.01'}
+                  min="0"
                   {...register('min_stock')}
                   className={errors.min_stock ? 'border-red-500' : ''} />
                 {errors.min_stock && <p className="text-red-500 text-xs">{errors.min_stock.message}</p>}

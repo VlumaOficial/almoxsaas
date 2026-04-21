@@ -44,7 +44,9 @@ export function useProducts() {
       const { data, error } = await supabase
         .from('products')
         .select(`
-          *,
+          id, company_id, category_id, supplier_id,
+          name, description, sku, unit, min_stock,
+          cost_price, is_active, created_at,
           category:categories(name),
           supplier:suppliers(name)
         `)
