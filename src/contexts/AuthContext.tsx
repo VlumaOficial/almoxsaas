@@ -52,13 +52,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      const profileData = data as Profile
-      setProfile(profileData)
+      setProfile(data as Profile)
 
       const { data: companyData } = await supabase
         .from('companies')
         .select('id, name, status, plan, trial_ends_at')
-        .eq('id', profileData.company_id)
+        .eq('id', data.company_id)
         .single()
 
       if (companyData) setCompany(companyData as Company)

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
-import { supabase } from '../integrations/supabase/client'
-import { useAuth } from '../contexts/AuthContext'
+import { useEffect, useState } from 'react'
+import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 
 export interface Product {
@@ -14,11 +14,22 @@ export interface Product {
   unit: string
   min_stock: number
   cost_price: number | null
-  image_url: string | null
   is_active: boolean
   created_at: string
-  category?: { name: string }
-  supplier?: { name: string }
+  category?: { name: string } | null
+  supplier?: { name: string } | null
+}
+
+export interface ProductFormData {
+  name: string
+  description?: string
+  sku?: string
+  unit: string
+  min_stock: number
+  cost_price?: number | null
+  category_id?: string | null
+  supplier_id?: string | null
+  is_active: boolean
 }
 
 export function useProducts() {
@@ -42,40 +53,52 @@ export function useProducts() {
 
       if (error) throw error
       setProducts(data || [])
-    } catch (error: any) {
+    } catch (err) {
       toast.error('Erro ao carregar produtos')
     } finally {
       setLoading(false)
     }
   }
 
-  async function addProduct(product: Partial<Product>) {
-    if (!company?.id) return
+  async function createProduct(data: ProductFormData) {
+    if (!company?.id) return false
     try {
       const { error } = await supabase
         .from('products')
-        .insert([{ ...product, company_id: company.id }])
+        .insert({ ...data, company_id: company.id } as any)
 
       if (error) throw error
-      toast.success('Produto cadastrado com sucesso')
-      fetchProducts()
-    } catch (error: any) {
-      toast.error('Erro ao cadastrar produto')
+      toast.success('Produto criado com sucesso!')
+      await fetchProducts()
+      return true
+    } catch (err: any) {
+      if (err.code === '23505') {
+        toast.error('Já existe um produto com este SKU.')
+      } else {
+        toast.error('Erro ao criar produto')
+      }
+      return false
     }
   }
 
-  async function updateProduct(id: string, product: Partial<Product>) {
+  async function updateProduct(id: string, data: ProductFormData) {
     try {
       const { error } = await supabase
         .from('products')
-        .update(product)
+        .update(data as any)
         .eq('id', id)
 
       if (error) throw error
-      toast.success('Produto atualizado')
-      fetchProducts()
-    } catch (error: any) {
-      toast.error('Erro ao atualizar produto')
+      toast.success('Produto atualizado com sucesso!')
+      await fetchProducts()
+      return true
+    } catch (err: any) {
+      if (err.code === '23505') {
+        toast.error('Já existe um produto com este SKU.')
+      } else {
+        toast.error('Erro ao atualizar produto')
+      }
+      return false
     }
   }
 
@@ -87,10 +110,29 @@ export function useProducts() {
         .eq('id', id)
 
       if (error) throw error
-      toast.success('Produto removido')
-      fetchProducts()
-    } catch (error: any) {
-      toast.error('Não foi possível excluir. Verifique se há movimentações vinculadas.')
+      toast.success('Produto excluído com sucesso!')
+      await fetchProducts()
+      return true
+    } catch (err) {
+      toast.error('Erro ao excluir produto. Verifique se não há movimentações vinculadas.')
+      return false
+    }
+  }
+
+  async function toggleProductStatus(id: string, is_active: boolean) {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ is_active } as any)
+        .eq('id', id)
+
+      if (error) throw error
+      toast.success(is_active ? 'Produto ativado!' : 'Produto desativado!')
+      await fetchProducts()
+      return true
+    } catch (err) {
+      toast.error('Erro ao alterar status do produto')
+      return false
     }
   }
 
@@ -98,5 +140,8 @@ export function useProducts() {
     fetchProducts()
   }, [company?.id])
 
-  return { products, loading, addProduct, updateProduct, deleteProduct, refresh: fetchProducts }
+  return {
+    products, loading, fetchProducts,
+    createProduct, updateProduct, deleteProduct, toggleProductStatus
+  }
 }

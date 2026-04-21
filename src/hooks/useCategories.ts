@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react'
-import { supabase } from '../integrations/supabase/client'
-import { useAuth } from '../contexts/AuthContext'
+import { useEffect, useState } from 'react'
+import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 
 export interface Category {
   id: string
+  company_id: string
   name: string
   parent_id: string | null
   is_active: boolean
   created_at: string
+  parent?: { name: string } | null
 }
 
 export function useCategories() {
@@ -22,46 +24,50 @@ export function useCategories() {
     try {
       const { data, error } = await supabase
         .from('categories')
-        .select('*')
+        .select('*, parent:categories!parent_id(name)')
         .eq('company_id', company.id)
         .order('name')
 
       if (error) throw error
       setCategories(data || [])
-    } catch (error: any) {
+    } catch (err) {
       toast.error('Erro ao carregar categorias')
     } finally {
       setLoading(false)
     }
   }
 
-  async function addCategory(name: string) {
-    if (!company?.id) return
+  async function createCategory(data: { name: string; parent_id?: string | null }) {
+    if (!company?.id) return false
     try {
       const { error } = await supabase
         .from('categories')
-        .insert([{ name, company_id: company.id }])
+        .insert({ ...data, company_id: company.id, is_active: true })
 
       if (error) throw error
-      toast.success('Categoria criada com sucesso')
-      fetchCategories()
-    } catch (error: any) {
+      toast.success('Categoria criada com sucesso!')
+      await fetchCategories()
+      return true
+    } catch (err) {
       toast.error('Erro ao criar categoria')
+      return false
     }
   }
 
-  async function updateCategory(id: string, name: string) {
+  async function updateCategory(id: string, data: { name: string; parent_id?: string | null }) {
     try {
       const { error } = await supabase
         .from('categories')
-        .update({ name })
+        .update(data)
         .eq('id', id)
 
       if (error) throw error
-      toast.success('Categoria atualizada')
-      fetchCategories()
-    } catch (error: any) {
+      toast.success('Categoria atualizada com sucesso!')
+      await fetchCategories()
+      return true
+    } catch (err) {
       toast.error('Erro ao atualizar categoria')
+      return false
     }
   }
 
@@ -73,10 +79,12 @@ export function useCategories() {
         .eq('id', id)
 
       if (error) throw error
-      toast.success('Categoria removida')
-      fetchCategories()
-    } catch (error: any) {
-      toast.error('Não foi possível excluir. Verifique se há produtos vinculados.')
+      toast.success('Categoria excluída com sucesso!')
+      await fetchCategories()
+      return true
+    } catch (err) {
+      toast.error('Erro ao excluir categoria. Verifique se não há produtos vinculados.')
+      return false
     }
   }
 
@@ -84,5 +92,5 @@ export function useCategories() {
     fetchCategories()
   }, [company?.id])
 
-  return { categories, loading, addCategory, updateCategory, deleteCategory, refresh: fetchCategories }
+  return { categories, loading, fetchCategories, createCategory, updateCategory, deleteCategory }
 }
