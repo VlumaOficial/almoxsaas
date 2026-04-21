@@ -27,38 +27,42 @@ export function ProductFilters({
   categories, suppliers
 }: ProductFiltersProps) {
   return (
-    <div className="flex flex-col sm:flex-row gap-3">
-      <div className="relative flex-1">
+    <div className="flex flex-col gap-3">
+      {/* Linha 1: Campo de busca por texto - largura total */}
+      <div className="relative w-full">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <Input
           placeholder="Buscar por nome ou SKU..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-9"
+          className="pl-9 w-full"
         />
       </div>
-      <CategoryCombobox
-        categories={categories}
-        value={categoryFilter === 'all' ? null : categoryFilter}
-        onChange={(val) => onCategoryChange(val || 'all')}
-        placeholder="Todas as categorias"
-      />
-      <SupplierCombobox
-        suppliers={suppliers}
-        value={supplierFilter === 'all' ? null : supplierFilter}
-        onChange={(val) => onSupplierChange(val || 'all')}
-        placeholder="Todos os fornecedores"
-      />
-      <Select value={statusFilter} onValueChange={onStatusChange}>
-        <SelectTrigger className="w-full sm:w-36">
-          <SelectValue placeholder="Status" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos</SelectItem>
-          <SelectItem value="active">Ativos</SelectItem>
-          <SelectItem value="inactive">Inativos</SelectItem>
-        </SelectContent>
-      </Select>
+      {/* Linha 2: Filtros dropdown */}
+      <div className="flex flex-wrap gap-3">
+        <CategoryCombobox
+          categories={categories}
+          value={categoryFilter === 'all' ? null : categoryFilter}
+          onChange={(val) => onCategoryChange(val || 'all')}
+          placeholder="Todas as categorias"
+        />
+        <SupplierCombobox
+          suppliers={suppliers}
+          value={supplierFilter === 'all' ? null : supplierFilter}
+          onChange={(val) => onSupplierChange(val || 'all')}
+          placeholder="Todos os fornecedores"
+        />
+        <Select value={statusFilter} onValueChange={onStatusChange}>
+          <SelectTrigger className="w-full sm:w-36">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="active">Ativos</SelectItem>
+            <SelectItem value="inactive">Inativos</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   )
 }
