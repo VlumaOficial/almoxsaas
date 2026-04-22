@@ -58,14 +58,21 @@ export function useDashboard(): DashboardData {
     setError(null)
 
     try {
-      // 1. Métricas de uso (company_usage)
+      // 1. Total de produtos ativos (contagem direta da tabela products)
+      const { count: totalProducts } = await supabase
+        .from('products')
+        .select('id', { count: 'exact', head: true })
+        .eq('company_id', company.id)
+        .eq('is_active', true)
+
+      // 2. Métricas de uso (company_usage) - apenas movimentos e usuários
       const { data: usage } = await supabase
         .from('company_usage')
-        .select('total_products, movements_this_month, total_users')
+        .select('movements_this_month, total_users')
         .eq('company_id', company.id)
         .single()
 
-      // 2. Produtos com estoque abaixo do mínimo
+      // 3. Produtos com estoque abaixo do mínimo
       const { data: stockData } = await supabase
         .from('stock')
         .select(`
@@ -112,7 +119,7 @@ export function useDashboard(): DashboardData {
       }))
 
       setMetrics({
-        totalProducts: usage?.total_products || 0,
+        totalProducts: totalProducts || 0,
         movementsThisMonth: usage?.movements_this_month || 0,
         lowStockCount: lowStock.length,
         activeUsers: usage?.total_users || 0,
