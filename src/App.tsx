@@ -54,6 +54,7 @@ export default function App() {
 
               {/* Rotas protegidas com AppLayout */}
               <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
+                <Route index element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard"     element={<DashboardPage />} />
                 <Route path="/produtos"      element={<ProductsPage />} />
                 <Route path="/movimentacoes" element={<PlaceholderPage name="Movimentações" />} />
