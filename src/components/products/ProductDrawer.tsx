@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -58,6 +58,10 @@ export function ProductDrawer({ open, onClose, onSubmit, product, categories, on
   const [categoryModalOpen, setCategoryModalOpen] = useState(false)
   const [supplierModalOpen, setSupplierModalOpen] = useState(false)
 
+  // Ref para guardar o nome do último item criado inline
+  const lastCreatedCategory = useRef<string | null>(null)
+  const lastCreatedSupplier = useRef<string | null>(null)
+
   const { register, handleSubmit, reset, setValue, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { is_active: true, min_stock: 0, unit: 'un' },
@@ -81,6 +85,28 @@ export function ProductDrawer({ open, onClose, onSubmit, product, categories, on
     }
   }, [product, open, reset])
 
+  // Monitora mudanças na lista de categorias
+  useEffect(() => {
+    if (lastCreatedCategory.current) {
+      const newCat = categories.find(c => c.name === lastCreatedCategory.current)
+      if (newCat) {
+        setValue('category_id', newCat.id)
+        lastCreatedCategory.current = null
+      }
+    }
+  }, [categories, setValue])
+
+  // Monitora mudanças na lista de fornecedores
+  useEffect(() => {
+    if (lastCreatedSupplier.current) {
+      const newSup = suppliers.find(s => s.name === lastCreatedSupplier.current)
+      if (newSup) {
+        setValue('supplier_id', newSup.id)
+        lastCreatedSupplier.current = null
+      }
+    }
+  }, [suppliers, setValue])
+
   async function onFormSubmit(data: FormData) {
     const success = await onSubmit({
       name: data.name,
@@ -97,26 +123,16 @@ export function ProductDrawer({ open, onClose, onSubmit, product, categories, on
   }
 
   async function handleCreateCategory(data: { name: string; parent_id?: string | null }) {
+    lastCreatedCategory.current = data.name
     const success = await onCreateCategory(data)
-    if (success) {
-      // Aguarda o estado atualizar e seleciona o novo item
-      setTimeout(() => {
-        const newCat = categories.find(c => c.name === data.name)
-        if (newCat) setValue('category_id', newCat.id)
-      }, 300)
-    }
+    if (!success) lastCreatedCategory.current = null
     return success
   }
 
   async function handleCreateSupplier(data: { name: string; cnpj?: string; email?: string; phone?: string }) {
+    lastCreatedSupplier.current = data.name
     const success = await onCreateSupplier(data)
-    if (success) {
-      // Aguarda o estado atualizar e seleciona o novo item
-      setTimeout(() => {
-        const newSup = suppliers.find(s => s.name === data.name)
-        if (newSup) setValue('supplier_id', newSup.id)
-      }, 300)
-    }
+    if (!success) lastCreatedSupplier.current = null
     return success
   }
 
