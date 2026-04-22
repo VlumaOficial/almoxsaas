@@ -26,11 +26,11 @@ import { Plus } from 'lucide-react'
 const schema = z.object({
   name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
   description: z.string().optional(),
-  sku: z.string().optional(),
+  sku: z.string().min(1, 'SKU/Código é obrigatório'),
   unit: z.string().min(1, 'Unidade obrigatória'),
   min_stock: z.coerce.number().min(0, 'Estoque mínimo deve ser 0 ou maior'),
   cost_price: z.coerce.number().nullable().optional(),
-  category_id: z.string().nullable().optional(),
+  category_id: z.string().min(1, 'Categoria é obrigatória'),
   supplier_id: z.string().nullable().optional(),
   is_active: z.boolean(),
 })
@@ -68,14 +68,14 @@ export function ProductDrawer({ open, onClose, onSubmit, product }: ProductDrawe
         unit: product.unit,
         min_stock: product.min_stock,
         cost_price: product.cost_price,
-        category_id: product.category_id,
+        category_id: product.category_id || '',
         supplier_id: product.supplier_id,
         is_active: product.is_active,
       })
     } else {
-      reset({ name: '', description: '', sku: '', unit: 'un', min_stock: 0, cost_price: null, category_id: null, supplier_id: null, is_active: true })
+      reset({ name: '', description: '', sku: '', unit: 'un', min_stock: 0, cost_price: null, category_id: '', supplier_id: null, is_active: true })
     }
-  }, [product, open])
+  }, [product, open, reset])
 
   async function onFormSubmit(data: FormData) {
     const success = await onSubmit({
@@ -85,7 +85,7 @@ export function ProductDrawer({ open, onClose, onSubmit, product }: ProductDrawe
       unit: data.unit,
       min_stock: data.min_stock,
       cost_price: data.cost_price || null,
-      category_id: data.category_id || null,
+      category_id: data.category_id,
       supplier_id: data.supplier_id || null,
       is_active: data.is_active,
     })
@@ -94,7 +94,14 @@ export function ProductDrawer({ open, onClose, onSubmit, product }: ProductDrawe
 
   async function handleCreateCategory(data: { name: string; parent_id?: string | null }) {
     const success = await createCategory(data)
-    if (success) await fetchCategories()
+    if (success) {
+      await fetchCategories()
+      // Selecionar automaticamente a nova categoria
+      const newCategory = categories.find(c => c.name === data.name && c.is_active)
+      if (newCategory) {
+        setValue('category_id', newCategory.id)
+      }
+    }
     return success
   }
 
@@ -138,8 +145,9 @@ export function ProductDrawer({ open, onClose, onSubmit, product }: ProductDrawe
             {/* SKU e Unidade */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="sku">SKU / Código <span className="text-slate-400">(opcional)</span></Label>
-                <Input id="sku" placeholder="Ex: PRD-001" {...register('sku')} />
+                <Label htmlFor="sku">SKU / Código *</Label>
+                <Input id="sku" placeholder="Ex: PRD-001" {...register('sku')} className={errors.sku ? 'border-red-500' : ''} />
+                {errors.sku && <p className="text-red-500 text-xs">{errors.sku.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label>Unidade *</Label>
@@ -177,7 +185,7 @@ export function ProductDrawer({ open, onClose, onSubmit, product }: ProductDrawe
             {/* Categoria */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label>Categoria <span className="text-slate-400">(opcional)</span></Label>
+                <Label>Categoria *</Label>
                 <button type="button"
                   onClick={() => setCategoryModalOpen(true)}
                   className="text-xs text-blue-700 hover:underline flex items-center gap-1">
@@ -190,6 +198,7 @@ export function ProductDrawer({ open, onClose, onSubmit, product }: ProductDrawe
                 onChange={(val) => setValue('category_id', val)}
                 placeholder="Selecione uma categoria"
               />
+              {errors.category_id && <p className="text-red-500 text-xs">{errors.category_id.message}</p>}
             </div>
 
             {/* Fornecedor */}
