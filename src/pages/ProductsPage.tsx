@@ -12,8 +12,8 @@ import { useAuth } from '@/contexts/AuthContext'
 export default function ProductsPage() {
   const { profile } = useAuth()
   const { products, loading, createProduct, updateProduct, deleteProduct, toggleProductStatus } = useProducts()
-  const { categories } = useCategories()
-  const { suppliers } = useSuppliers()
+  const { categories, createCategory, fetchCategories } = useCategories()
+  const { suppliers, addSupplier, refresh: refreshSuppliers } = useSuppliers()
   const canEdit = profile?.role && ['super_admin', 'owner', 'manager'].includes(profile.role)
 
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -40,6 +40,22 @@ export default function ProductsPage() {
   async function handleSubmit(data: any) {
     if (editingProduct) return updateProduct(editingProduct.id, data)
     return createProduct(data)
+  }
+
+  // Após criar categoria inline — atualiza lista
+  async function handleCreateCategory(data: any) {
+    const success = await createCategory(data)
+    if (success) {
+      await fetchCategories()
+    }
+    return success
+  }
+
+  // Após criar fornecedor inline — atualiza lista
+  async function handleCreateSupplier(data: any) {
+    await addSupplier(data as any)
+    await refreshSuppliers()
+    return true
   }
 
   // Resetar página ao filtrar
@@ -116,6 +132,10 @@ export default function ProductsPage() {
         onClose={handleClose}
         onSubmit={handleSubmit}
         product={editingProduct}
+        categories={categories}
+        onCreateCategory={handleCreateCategory}
+        suppliers={suppliers}
+        onCreateSupplier={handleCreateSupplier}
       />
     </div>
   )

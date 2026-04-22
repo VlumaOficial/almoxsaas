@@ -21,6 +21,8 @@ import { CategoryModal } from '@/components/categories/CategoryModal'
 import { CategoryCombobox } from '@/components/products/CategoryCombobox'
 import { SupplierCombobox } from '@/components/products/SupplierCombobox'
 import { SupplierModal } from '@/components/products/SupplierModal'
+import { Category } from '@/hooks/useCategories'
+import { Supplier } from '@/hooks/useSuppliers'
 import { Plus } from 'lucide-react'
 
 const schema = z.object({
@@ -45,12 +47,14 @@ interface ProductDrawerProps {
   onClose: () => void
   onSubmit: (data: ProductFormData) => Promise<boolean>
   product?: Product | null
+  categories: Category[]
+  onCreateCategory: (data: any) => Promise<boolean>
+  suppliers: Supplier[]
+  onCreateSupplier: (data: any) => Promise<boolean>
 }
 
-export function ProductDrawer({ open, onClose, onSubmit, product }: ProductDrawerProps) {
+export function ProductDrawer({ open, onClose, onSubmit, product, categories, onCreateCategory, suppliers, onCreateSupplier }: ProductDrawerProps) {
   const isEditing = !!product
-  const { categories, createCategory, fetchCategories } = useCategories()
-  const { suppliers, addSupplier, refresh: refreshSuppliers } = useSuppliers()
   const [categoryModalOpen, setCategoryModalOpen] = useState(false)
   const [supplierModalOpen, setSupplierModalOpen] = useState(false)
 
@@ -93,27 +97,27 @@ export function ProductDrawer({ open, onClose, onSubmit, product }: ProductDrawe
   }
 
   async function handleCreateCategory(data: { name: string; parent_id?: string | null }) {
-    const success = await createCategory(data)
+    const success = await onCreateCategory(data)
     if (success) {
-      await fetchCategories()
-      // Selecionar automaticamente a nova categoria
-      const newCategory = categories.find(c => c.name === data.name && c.is_active)
-      if (newCategory) {
-        setValue('category_id', newCategory.id)
-      }
+      // Aguarda o estado atualizar e seleciona o novo item
+      setTimeout(() => {
+        const newCat = categories.find(c => c.name === data.name)
+        if (newCat) setValue('category_id', newCat.id)
+      }, 300)
     }
     return success
   }
 
   async function handleCreateSupplier(data: { name: string; cnpj?: string; email?: string; phone?: string }) {
-    await addSupplier(data as any)
-    await refreshSuppliers()
-    // Selecionar automaticamente o novo fornecedor
-    const newSupplier = suppliers.find(s => s.name === data.name && s.is_active)
-    if (newSupplier) {
-      setValue('supplier_id', newSupplier.id)
+    const success = await onCreateSupplier(data)
+    if (success) {
+      // Aguarda o estado atualizar e seleciona o novo item
+      setTimeout(() => {
+        const newSup = suppliers.find(s => s.name === data.name)
+        if (newSup) setValue('supplier_id', newSup.id)
+      }, 300)
     }
-    return true
+    return success
   }
 
   return (
