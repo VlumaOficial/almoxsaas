@@ -58,7 +58,7 @@ export function useFeatureFlag(feature: FeatureKey): {
         schema: 'public',
         table: 'feature_flags_global',
       }, (payload) => {
-        console.log('Flag global mudou:', payload)
+        if (import.meta.env.DEV) console.log('[FeatureFlag] Flag global mudou:', payload)
         invalidateFeatureCache()
       })
       .on('postgres_changes', {
@@ -66,7 +66,7 @@ export function useFeatureFlag(feature: FeatureKey): {
         schema: 'public',
         table: 'feature_flags_plan',
       }, (payload) => {
-        console.log('Flag plano mudou:', payload)
+        if (import.meta.env.DEV) console.log('[FeatureFlag] Flag plano mudou:', payload)
         invalidateFeatureCache()
       })
       .on('postgres_changes', {
@@ -74,12 +74,12 @@ export function useFeatureFlag(feature: FeatureKey): {
         schema: 'public',
         table: 'feature_flags_company',
       }, (payload) => {
-        console.log('Flag empresa mudou:', payload)
+        if (import.meta.env.DEV) console.log('[FeatureFlag] Flag empresa mudou:', payload)
         if (company?.id) invalidateFeatureCache(company.id)
         else invalidateFeatureCache()
       })
       .subscribe((status) => {
-        console.log('Status canal:', channelName, status)
+        if (import.meta.env.DEV) console.log('[FeatureFlag] Status canal:', channelName, status)
       })
 
     return () => { supabase.removeChannel(channel) }

@@ -11,7 +11,7 @@ export function AuthGuard({ children, requireRoles }: AuthGuardProps) {
   const location = useLocation()
 
   // DEBUG TEMPORÁRIO - remover após identificar o problema
-  console.log('AuthGuard state:', {
+  if (import.meta.env.DEV) console.log('[AuthGuard]', {
     loading,
     hasSession: !!session,
     hasProfile: !!profile,
