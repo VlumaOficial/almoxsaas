@@ -55,25 +55,29 @@ export function useFeatureFlag(feature: FeatureKey): {
         event: '*',
         schema: 'public',
         table: 'feature_flags_global',
-      }, () => {
+      }, (payload) => {
+        console.log('Flag global mudou:', payload)
         invalidateFeatureCache()
       })
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'feature_flags_plan',
-      }, () => {
+      }, (payload) => {
+        console.log('Flag plano mudou:', payload)
         invalidateFeatureCache()
       })
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'feature_flags_company',
-      }, () => {
-        if (company?.id) invalidateFeatureCache(company.id)
-        else invalidateFeatureCache()
+      }, (payload) => {
+        console.log('Flag empresa mudou:', payload)
+        invalidateFeatureCache()
       })
-      .subscribe()
+      .subscribe((status) => {
+        console.log('Status do canal Realtime:', status)
+      })
 
     return () => { supabase.removeChannel(channel) }
   }, [company?.id])
