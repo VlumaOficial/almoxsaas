@@ -49,10 +49,12 @@ export function useFeatureFlag(feature: FeatureKey): {
 
   // Escuta mudanças em tempo real nas tabelas de flags
   useEffect(() => {
+    const channelName = `feature-flags-${Math.random().toString(36).substring(7)}`
+
     const channel = supabase
-      .channel('feature-flags-changes')
+      .channel(channelName)
       .on('postgres_changes', {
-        event: '*',
+        event: 'UPDATE',
         schema: 'public',
         table: 'feature_flags_global',
       }, (payload) => {
@@ -60,7 +62,7 @@ export function useFeatureFlag(feature: FeatureKey): {
         invalidateFeatureCache()
       })
       .on('postgres_changes', {
-        event: '*',
+        event: 'UPDATE',
         schema: 'public',
         table: 'feature_flags_plan',
       }, (payload) => {
@@ -73,10 +75,11 @@ export function useFeatureFlag(feature: FeatureKey): {
         table: 'feature_flags_company',
       }, (payload) => {
         console.log('Flag empresa mudou:', payload)
-        invalidateFeatureCache()
+        if (company?.id) invalidateFeatureCache(company.id)
+        else invalidateFeatureCache()
       })
       .subscribe((status) => {
-        console.log('Status do canal Realtime:', status)
+        console.log('Status canal:', channelName, status)
       })
 
     return () => { supabase.removeChannel(channel) }
