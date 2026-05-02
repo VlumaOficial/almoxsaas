@@ -14,6 +14,7 @@ export interface Product {
   unit: string
   min_stock: number
   cost_price: number | null
+  image_url: string | null
   is_active: boolean
   created_at: string
   category?: { name: string } | null

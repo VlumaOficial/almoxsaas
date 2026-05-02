@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { Product, ProductFormData } from '@/hooks/useProducts'
 import { useCategories } from '@/hooks/useCategories'
 import { useSuppliers } from '@/hooks/useSuppliers'
+import { useFeatureFlag } from '@/hooks/useFeatureFlag'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle
 } from '@/components/ui/sheet'
@@ -21,6 +22,7 @@ import { CategoryModal } from '@/components/categories/CategoryModal'
 import { CategoryCombobox } from '@/components/products/CategoryCombobox'
 import { SupplierCombobox } from '@/components/products/SupplierCombobox'
 import { SupplierModal } from '@/components/products/SupplierModal'
+import { ImageUpload } from '@/components/products/ImageUpload'
 import { Category } from '@/hooks/useCategories'
 import { Supplier } from '@/hooks/useSuppliers'
 import { Plus } from 'lucide-react'
@@ -34,6 +36,7 @@ const schema = z.object({
   cost_price: z.coerce.number().nullable().optional(),
   category_id: z.string().min(1, 'Categoria é obrigatória'),
   supplier_id: z.string().nullable().optional(),
+  image_url: z.string().nullable().optional(),
   is_active: z.boolean(),
 })
 
@@ -57,6 +60,7 @@ export function ProductDrawer({ open, onClose, onSubmit, product, categories, on
   const isEditing = !!product
   const [categoryModalOpen, setCategoryModalOpen] = useState(false)
   const [supplierModalOpen, setSupplierModalOpen] = useState(false)
+  const { enabled: canUploadImage } = useFeatureFlag('product_images')
 
   // Ref para guardar o nome do último item criado inline
   const lastCreatedCategory = useRef<string | null>(null)
@@ -78,10 +82,11 @@ export function ProductDrawer({ open, onClose, onSubmit, product, categories, on
         cost_price: product.cost_price,
         category_id: product.category_id || '',
         supplier_id: product.supplier_id,
+        image_url: product.image_url || null,
         is_active: product.is_active,
       })
     } else {
-      reset({ name: '', description: '', sku: '', unit: 'un', min_stock: 0, cost_price: null, category_id: '', supplier_id: null, is_active: true })
+      reset({ name: '', description: '', sku: '', unit: 'un', min_stock: 0, cost_price: null, category_id: '', supplier_id: null, image_url: null, is_active: true })
     }
   }, [product, open, reset])
 
@@ -109,15 +114,11 @@ export function ProductDrawer({ open, onClose, onSubmit, product, categories, on
 
   async function onFormSubmit(data: FormData) {
     const success = await onSubmit({
-      name: data.name,
-      description: data.description,
-      sku: data.sku,
-      unit: data.unit,
-      min_stock: data.min_stock,
-      cost_price: data.cost_price || null,
-      category_id: data.category_id,
+      ...data,
+      image_url: data.image_url || null,
+      category_id: data.category_id || null,
       supplier_id: data.supplier_id || null,
-      is_active: data.is_active,
+      cost_price: data.cost_price || null,
     })
     if (success) onClose()
   }
@@ -236,6 +237,21 @@ export function ProductDrawer({ open, onClose, onSubmit, product, categories, on
                 value={watch('supplier_id')}
                 onChange={(val) => setValue('supplier_id', val)}
                 placeholder="Selecione um fornecedor"
+              />
+            </div>
+
+            {/* Imagem do produto */}
+            <div className="space-y-1.5">
+              <Label>
+                Imagem do produto
+                {!canUploadImage && (
+                  <span className="ml-2 text-xs text-slate-400">(não disponível no seu plano)</span>
+                )}
+              </Label>
+              <ImageUpload
+                currentImageUrl={watch('image_url')}
+                onImageChange={(url) => setValue('image_url', url)}
+                disabled={!canUploadImage}
               />
             </div>
 

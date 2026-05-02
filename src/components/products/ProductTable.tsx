@@ -98,10 +98,26 @@ export function ProductTable({ products, loading, onEdit, onDelete, onToggleStat
                 {products.map(product => (
                   <tr key={product.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
                     <td className="px-5 py-3">
-                      <p className="font-medium text-slate-900">{product.name}</p>
-                      {product.description && (
-                        <p className="text-xs text-slate-400 truncate max-w-xs">{product.description}</p>
-                      )}
+                      <div className="flex items-center gap-3">
+                        {product.image_url ? (
+                          <img
+                            src={product.image_url}
+                            alt={product.name}
+                            className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 
+                            flex items-center justify-center shrink-0">
+                            <Package size={16} className="text-slate-300" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-medium text-slate-900">{product.name}</p>
+                          {product.description && (
+                            <p className="text-xs text-slate-400 truncate max-w-xs">{product.description}</p>
+                          )}
+                        </div>
+                      </div>
                     </td>
                     <td className="px-5 py-3 text-slate-500 whitespace-nowrap">
                       {product.sku || <span className="text-slate-300">—</span>}
