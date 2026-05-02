@@ -72,16 +72,6 @@ export default function AdminPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-blue-50 rounded-lg">
-          <ShieldCheck size={24} className="text-blue-800" />
-        </div>
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">Administração Global</h2>
-          <p className="text-slate-500 text-sm">Controle de features, planos e empresas</p>
-        </div>
-      </div>
-
       <Tabs defaultValue="global">
         <TabsList className="grid grid-cols-3 w-full max-w-lg">
           <TabsTrigger value="global" className="flex items-center gap-2">
