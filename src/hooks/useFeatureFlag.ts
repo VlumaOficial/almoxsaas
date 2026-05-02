@@ -13,6 +13,23 @@ export type FeatureKey =
   | 'mobile_pwa' | 'barcode_scanner' | 'push_notifications'
 
 const flagCache: Record<string, boolean> = {}
+const listeners: Set<() => void> = new Set()
+
+// Notifica todos os hooks quando uma flag muda
+function notifyListeners() {
+  listeners.forEach(fn => fn())
+}
+
+export function invalidateFeatureCache(companyId?: string) {
+  if (companyId) {
+    Object.keys(flagCache).forEach(key => {
+      if (key.startsWith(companyId)) delete flagCache[key]
+    })
+  } else {
+    Object.keys(flagCache).forEach(key => delete flagCache[key])
+  }
+  notifyListeners()
+}
 
 export function useFeatureFlag(feature: FeatureKey): {
   enabled: boolean
@@ -21,6 +38,45 @@ export function useFeatureFlag(feature: FeatureKey): {
   const { company, profile } = useAuth()
   const [enabled, setEnabled] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [tick, setTick] = useState(0) // força re-render quando cache invalida
+
+  // Escuta invalidações de cache
+  useEffect(() => {
+    const listener = () => setTick(t => t + 1)
+    listeners.add(listener)
+    return () => { listeners.delete(listener) }
+  }, [])
+
+  // Escuta mudanças em tempo real nas tabelas de flags
+  useEffect(() => {
+    const channel = supabase
+      .channel('feature-flags-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'feature_flags_global',
+      }, () => {
+        invalidateFeatureCache()
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'feature_flags_plan',
+      }, () => {
+        invalidateFeatureCache()
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'feature_flags_company',
+      }, () => {
+        if (company?.id) invalidateFeatureCache(company.id)
+        else invalidateFeatureCache()
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [company?.id])
 
   useEffect(() => {
     // Super Admin sempre tem acesso a tudo
@@ -32,7 +88,7 @@ export function useFeatureFlag(feature: FeatureKey): {
 
     if (!company?.id) return
 
-    const cacheKey = `${company.id}:${feature}`
+    const cacheKey = `${company.id}:${feature}` 
 
     if (flagCache[cacheKey] !== undefined) {
       setEnabled(flagCache[cacheKey])
@@ -40,6 +96,7 @@ export function useFeatureFlag(feature: FeatureKey): {
       return
     }
 
+    setLoading(true)
     supabase
       .rpc('is_feature_enabled', {
         p_feature: feature,
@@ -51,17 +108,7 @@ export function useFeatureFlag(feature: FeatureKey): {
         setEnabled(result)
         setLoading(false)
       })
-  }, [company?.id, feature, profile?.role])
+  }, [company?.id, feature, profile?.role, tick])
 
   return { enabled, loading }
-}
-
-export function invalidateFeatureCache(companyId?: string) {
-  if (companyId) {
-    Object.keys(flagCache).forEach(key => {
-      if (key.startsWith(companyId)) delete flagCache[key]
-    })
-  } else {
-    Object.keys(flagCache).forEach(key => delete flagCache[key])
-  }
 }
