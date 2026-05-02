@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext'
 
 export default function ProductsPage() {
   const { profile } = useAuth()
-  const { products, loading, createProduct, updateProduct, deleteProduct, toggleProductStatus } = useProducts()
+  const { products, loading, fetchProducts, createProduct, updateProduct, deleteProduct, toggleProductStatus } = useProducts()
   const { categories, createCategory, fetchCategories } = useCategories()
   const { suppliers, addSupplier, refresh: refreshSuppliers } = useSuppliers()
   const canEdit = profile?.role && ['super_admin', 'owner', 'manager'].includes(profile.role)
@@ -148,8 +148,11 @@ export default function ProductsPage() {
       <ImportModal
         open={importOpen}
         onClose={() => setImportOpen(false)}
-        onSuccess={async () => {
-          await fetchProducts()
+        onSuccess={() => {
+          // Aguarda 500ms para garantir que o Supabase processou todos os inserts
+          setTimeout(async () => {
+            await fetchProducts()
+          }, 500)
           setImportOpen(false)
         }}
       />
