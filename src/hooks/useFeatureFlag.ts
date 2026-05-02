@@ -18,14 +18,21 @@ export function useFeatureFlag(feature: FeatureKey): {
   enabled: boolean
   loading: boolean
 } {
-  const { company } = useAuth()
+  const { company, profile } = useAuth()
   const [enabled, setEnabled] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Super Admin sempre tem acesso a tudo
+    if (profile?.role === 'super_admin') {
+      setEnabled(true)
+      setLoading(false)
+      return
+    }
+
     if (!company?.id) return
 
-    const cacheKey = `${company.id}:${feature}` 
+    const cacheKey = `${company.id}:${feature}`
 
     if (flagCache[cacheKey] !== undefined) {
       setEnabled(flagCache[cacheKey])
@@ -44,7 +51,7 @@ export function useFeatureFlag(feature: FeatureKey): {
         setEnabled(result)
         setLoading(false)
       })
-  }, [company?.id, feature])
+  }, [company?.id, feature, profile?.role])
 
   return { enabled, loading }
 }
