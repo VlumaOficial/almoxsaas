@@ -148,8 +148,8 @@ export default function ProductsPage() {
       <ImportModal
         open={importOpen}
         onClose={() => setImportOpen(false)}
-        onSuccess={() => {
-          fetchProducts()
+        onSuccess={async () => {
+          await fetchProducts()
           setImportOpen(false)
         }}
       />
