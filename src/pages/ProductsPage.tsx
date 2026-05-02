@@ -5,8 +5,9 @@ import { useSuppliers } from '@/hooks/useSuppliers'
 import { ProductTable } from '@/components/products/ProductTable'
 import { ProductDrawer } from '@/components/products/ProductDrawer'
 import { ProductFilters } from '@/components/products/ProductFilters'
+import { ImportModal } from '@/components/products/ImportModal'
 import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
+import { Plus, FileSpreadsheet } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function ProductsPage() {
@@ -18,6 +19,7 @@ export default function ProductsPage() {
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [importOpen, setImportOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [supplierFilter, setSupplierFilter] = useState('all')
@@ -94,9 +96,14 @@ export default function ProductsPage() {
           </p>
         </div>
         {canEdit && (
-          <Button onClick={() => setDrawerOpen(true)} className="bg-blue-800 hover:bg-blue-900">
-            <Plus size={16} className="mr-2" /> Novo produto
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
+              <FileSpreadsheet size={16} className="mr-2" /> Importar
+            </Button>
+            <Button onClick={() => setDrawerOpen(true)} className="bg-blue-800 hover:bg-blue-900">
+              <Plus size={16} className="mr-2" /> Novo produto
+            </Button>
+          </div>
         )}
       </div>
 
@@ -136,6 +143,15 @@ export default function ProductsPage() {
         onCreateCategory={handleCreateCategory}
         suppliers={suppliers}
         onCreateSupplier={handleCreateSupplier}
+      />
+
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onSuccess={() => {
+          fetchProducts()
+          setImportOpen(false)
+        }}
       />
     </div>
   )
