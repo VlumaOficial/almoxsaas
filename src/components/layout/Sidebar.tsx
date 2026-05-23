@@ -5,7 +5,7 @@ import { Logo } from '../auth/Logo'
 import {
   LayoutDashboard, Package, ArrowLeftRight, Warehouse,
   Tag, Truck, Users, Settings, ShieldCheck,
-  ChevronLeft, ChevronRight, ClipboardList
+  ChevronLeft, ChevronRight, ClipboardList, FolderOpen
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
@@ -35,6 +35,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Almoxarifados',  path: '/almoxarifados',   icon: <Warehouse size={18} />,       roles: ['super_admin','owner','manager'] },
   { label: 'Categorias',     path: '/categorias',      icon: <Tag size={18} />,             roles: ['super_admin','owner','manager'] },
   { label: 'Fornecedores',   path: '/fornecedores',    icon: <Truck size={18} />,           roles: ['super_admin','owner','manager'] },
+  { label: 'Projetos',       path: '/projetos',        icon: <FolderOpen size={18} />,      roles: ['super_admin','owner','manager','operator'] },
   { label: 'Usuários',       path: '/usuarios',        icon: <Users size={18} />,           roles: ['super_admin','owner'] },
   { label: 'Configurações',  path: '/configuracoes',   icon: <Settings size={18} />,        roles: ['super_admin','owner'] },
   { label: 'Admin Global',   path: '/admin',           icon: <ShieldCheck size={18} />,     roles: ['super_admin'] },
