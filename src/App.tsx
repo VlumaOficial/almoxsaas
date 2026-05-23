@@ -22,6 +22,7 @@ import WarehousesPage from './pages/WarehousesPage'
 import SuppliersPage from './pages/SuppliersPage'
 import PlanosPage from './pages/PlanosPage'
 import AdminPage from './pages/AdminPage'
+import ProjectsPage from './pages/ProjectsPage'
 
 // Placeholders para fases futuras
 const PlaceholderPage = ({ name }: { name: string }) => (
@@ -63,6 +64,7 @@ export default function App() {
                 <Route path="/almoxarifados" element={<WarehousesPage />} />
                 <Route path="/categorias"    element={<CategoriesPage />} />
                 <Route path="/fornecedores"  element={<SuppliersPage />} />
+                <Route path="/projetos"     element={<ProjectsPage />} />
                 <Route path="/usuarios"      element={<PlaceholderPage name="Usuários" />} />
                 <Route path="/configuracoes" element={<PlaceholderPage name="Configurações" />} />
                 <Route path="/admin"         element={<AdminPage />} />
