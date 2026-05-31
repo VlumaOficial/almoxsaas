@@ -48,8 +48,9 @@ export default function StockPage() {
       const matchSearch = !search ||
         item.product_name.toLowerCase().includes(search.toLowerCase()) ||
         item.product_sku?.toLowerCase().includes(search.toLowerCase())
-      const matchStatus = statusFilter === "all" || item.status === statusFilter
-      const matchWarehouse = warehouseFilter === "all" || item.warehouse_id === warehouseFilter
+      const matchStatus = statusFilter === 'all' || item.status === statusFilter
+      const matchWarehouse = warehouseFilter === 'all' ||
+        (warehouseFilter !== 'all' && item.warehouse_id === warehouseFilter)
       return matchSearch && matchStatus && matchWarehouse
     })
   }, [stockByWarehouse, search, statusFilter, warehouseFilter])
