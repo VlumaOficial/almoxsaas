@@ -106,6 +106,124 @@ export function useMovements() {
     }
   }
 
+  async function updateStock(
+    type: MovementType,
+    companyId: string,
+    warehouseId: string,
+    warehouseDestId: string | null,
+    items: { product_id: string; quantity: number }[]
+  ) {
+    for (const item of items) {
+      if (type === 'entrada' || type === 'retorno') {
+        const { data: existing } = await supabase
+          .from('stock')
+          .select('quantity')
+          .eq('product_id', item.product_id)
+          .eq('warehouse_id', warehouseId)
+          .single()
+
+        if (existing) {
+          await supabase
+            .from('stock')
+            .update({ quantity: existing.quantity + item.quantity, updated_at: new Date().toISOString() })
+            .eq('product_id', item.product_id)
+            .eq('warehouse_id', warehouseId)
+        } else {
+          await supabase
+            .from('stock')
+            .insert({
+              company_id: companyId,
+              product_id: item.product_id,
+              warehouse_id: warehouseId,
+              quantity: item.quantity,
+            })
+        }
+      } else if (type === 'saida') {
+        const { data: existing } = await supabase
+          .from('stock')
+          .select('quantity')
+          .eq('product_id', item.product_id)
+          .eq('warehouse_id', warehouseId)
+          .single()
+
+        if (existing) {
+          await supabase
+            .from('stock')
+            .update({ quantity: existing.quantity - item.quantity, updated_at: new Date().toISOString() })
+            .eq('product_id', item.product_id)
+            .eq('warehouse_id', warehouseId)
+        }
+      } else if (type === 'transferencia') {
+        // Debita origem
+        const { data: origin } = await supabase
+          .from('stock')
+          .select('quantity')
+          .eq('product_id', item.product_id)
+          .eq('warehouse_id', warehouseId)
+          .single()
+
+        if (origin) {
+          await supabase
+            .from('stock')
+            .update({ quantity: origin.quantity - item.quantity, updated_at: new Date().toISOString() })
+            .eq('product_id', item.product_id)
+            .eq('warehouse_id', warehouseId)
+        }
+
+        // Credita destino
+        if (warehouseDestId) {
+          const { data: dest } = await supabase
+            .from('stock')
+            .select('quantity')
+            .eq('product_id', item.product_id)
+            .eq('warehouse_id', warehouseDestId)
+            .single()
+
+          if (dest) {
+            await supabase
+              .from('stock')
+              .update({ quantity: dest.quantity + item.quantity, updated_at: new Date().toISOString() })
+              .eq('product_id', item.product_id)
+              .eq('warehouse_id', warehouseDestId)
+          } else {
+            await supabase
+              .from('stock')
+              .insert({
+                company_id: companyId,
+                product_id: item.product_id,
+                warehouse_id: warehouseDestId,
+                quantity: item.quantity,
+              })
+          }
+        }
+      } else if (type === 'ajuste' || type === 'inventario') {
+        const { data: existing } = await supabase
+          .from('stock')
+          .select('quantity')
+          .eq('product_id', item.product_id)
+          .eq('warehouse_id', warehouseId)
+          .single()
+
+        if (existing) {
+          await supabase
+            .from('stock')
+            .update({ quantity: item.quantity, updated_at: new Date().toISOString() })
+            .eq('product_id', item.product_id)
+            .eq('warehouse_id', warehouseId)
+        } else {
+          await supabase
+            .from('stock')
+            .insert({
+              company_id: companyId,
+              product_id: item.product_id,
+              warehouse_id: warehouseId,
+              quantity: item.quantity,
+            })
+        }
+      }
+    }
+  }
+
   async function createMovement(data: MovementFormData): Promise<Movement | null> {
     if (!company?.id || !profile?.id) return null
 
@@ -154,6 +272,17 @@ export function useMovements() {
 
       if (itemsError) throw itemsError
 
+      // Atualiza estoque para movimentações aprovadas
+      if (initialStatus === 'aprovado') {
+        await updateStock(
+          data.type,
+          company.id,
+          data.warehouse_id,
+          data.warehouse_dest_id || null,
+          data.items
+        )
+      }
+
       toast.success(
         isManager
           ? 'Movimentação registrada e aprovada!'
@@ -171,6 +300,9 @@ export function useMovements() {
   async function approveMovement(id: string) {
     if (!profile?.id) return false
     try {
+      const movement = movements.find(m => m.id === id)
+      if (!movement) return false
+
       const { error } = await supabase
         .from('movements')
         .update({
@@ -180,6 +312,21 @@ export function useMovements() {
         .eq('id', id)
 
       if (error) throw error
+
+      // Atualiza estoque
+      const items = movement.movement_items?.map(i => ({
+        product_id: i.product_id,
+        quantity: i.quantity,
+      })) || []
+
+      await updateStock(
+        movement.type,
+        movement.company_id,
+        movement.warehouse_id,
+        movement.warehouse_dest_id,
+        items
+      )
+
       toast.success('Movimentação aprovada! Estoque atualizado.')
       await fetchMovements()
       return true
