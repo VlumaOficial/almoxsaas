@@ -44,6 +44,8 @@ export default function StockPage() {
   }, [stockItems, search, statusFilter])
 
   const filteredByWarehouse = useMemo(() => {
+    console.log('[StockPage] warehouseFilter:', warehouseFilter)
+    console.log('[StockPage] stockByWarehouse total:', stockByWarehouse.length)
     return stockByWarehouse.filter(item => {
       const matchSearch = !search ||
         item.product_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -51,6 +53,7 @@ export default function StockPage() {
       const matchStatus = statusFilter === 'all' || item.status === statusFilter
       const matchWarehouse = warehouseFilter === 'all' ||
         (warehouseFilter !== 'all' && item.warehouse_id === warehouseFilter)
+      console.log('[StockPage] item:', item.warehouse_id, 'filter:', warehouseFilter, 'match:', matchWarehouse)
       return matchSearch && matchStatus && matchWarehouse
     })
   }, [stockByWarehouse, search, statusFilter, warehouseFilter])
