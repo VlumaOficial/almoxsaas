@@ -5,8 +5,22 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
-import { AlertTriangle } from 'lucide-react'
+import {
+  Command, CommandEmpty, CommandGroup,
+  CommandInput, CommandItem, CommandList
+} from '@/components/ui/command'
+import {
+  Popover, PopoverContent, PopoverTrigger
+} from '@/components/ui/popover'
+import { AlertTriangle, ChevronsUpDown, Plus, Trash2 } from 'lucide-react'
+
+interface ReturnItem {
+  product_id: string
+  product_name: string
+  product_unit: string
+  max_quantity: number
+  quantity: number
+}
 
 interface ReturnModalProps {
   open: boolean
@@ -16,58 +30,61 @@ interface ReturnModalProps {
 }
 
 export function ReturnModal({ open, onClose, movement, onConfirm }: ReturnModalProps) {
-  const [selected, setSelected] = useState<Record<string, boolean>>({})
-  const [quantities, setQuantities] = useState<Record<string, number>>({})
+  const [returnItems, setReturnItems] = useState<ReturnItem[]>([])
+  const [popoverOpen, setPopoverOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   if (!movement) return null
 
-  const items = movement.movement_items || []
+  const movementItems = movement.movement_items || []
+  const addedIds = new Set(returnItems.map(i => i.product_id))
+  const availableItems = movementItems.filter(i => !addedIds.has(i.product_id))
 
-  function toggleItem(productId: string) {
-    setSelected(prev => {
-      const next = { ...prev, [productId]: !prev[productId] }
-      if (!next[productId]) {
-        setQuantities(q => { const nq = { ...q }; delete nq[productId]; return nq })
-      }
-      return next
-    })
+  function addItem(item: any) {
+    setReturnItems(prev => [...prev, {
+      product_id: item.product_id,
+      product_name: (item.product as any)?.name || item.product_id,
+      product_unit: (item.product as any)?.unit || 'un',
+      max_quantity: item.quantity,
+      quantity: 0,
+    }])
+    setPopoverOpen(false)
   }
 
-  function handleQuantityChange(productId: string, value: string) {
+  function removeItem(productId: string) {
+    setReturnItems(prev => prev.filter(i => i.product_id !== productId))
+  }
+
+  function updateQuantity(productId: string, value: string) {
     const num = parseFloat(value)
-    setQuantities(prev => ({ ...prev, [productId]: isNaN(num) ? 0 : num }))
+    setReturnItems(prev => prev.map(i =>
+      i.product_id === productId
+        ? { ...i, quantity: isNaN(num) ? 0 : num }
+        : i
+    ))
   }
 
   function handleClose() {
-    setSelected({})
-    setQuantities({})
+    setReturnItems([])
     onClose()
   }
 
   async function handleConfirm() {
-    const returnItems = items
-      .filter(item => selected[item.product_id] && (quantities[item.product_id] || 0) > 0)
-      .map(item => ({
-        product_id: item.product_id,
-        quantity: quantities[item.product_id],
-      }))
-
-    if (returnItems.length === 0) return
+    const validItems = returnItems.filter(i => i.quantity > 0 && i.quantity <= i.max_quantity)
+    if (validItems.length === 0) return
 
     setSubmitting(true)
-    const success = await onConfirm(returnItems)
+    const success = await onConfirm(
+      validItems.map(i => ({ product_id: i.product_id, quantity: i.quantity }))
+    )
     if (success) {
-      setSelected({})
-      setQuantities({})
+      setReturnItems([])
       onClose()
     }
     setSubmitting(false)
   }
 
-  const hasValidItems = items.some(item =>
-    selected[item.product_id] && (quantities[item.product_id] || 0) > 0
-  )
+  const hasValidItems = returnItems.some(i => i.quantity > 0 && i.quantity <= i.max_quantity)
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -87,57 +104,96 @@ export function ReturnModal({ open, onClose, movement, onConfirm }: ReturnModalP
             </div>
           </div>
 
-          <div className="space-y-2">
-            {items.map(item => {
-              const maxQty = item.quantity
-              const isSelected = !!selected[item.product_id]
-              const returnQty = quantities[item.product_id] || 0
-              const isInvalid = isSelected && returnQty > maxQty
+          {/* Seletor de produto */}
+          {availableItems.length > 0 && (
+            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-between font-normal">
+                  <span className="flex items-center gap-2">
+                    <Plus size={14} className="text-blue-700" />
+                    Adicionar produto para retorno
+                  </span>
+                  <ChevronsUpDown size={14} className="text-slate-400" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0">
+                <Command>
+                  <CommandInput placeholder="Buscar produto..." />
+                  <CommandList>
+                    <CommandEmpty>Nenhum produto disponível</CommandEmpty>
+                    <CommandGroup>
+                      {availableItems.map(item => (
+                        <CommandItem
+                          key={item.product_id}
+                          value={(item.product as any)?.name || item.product_id}
+                          onSelect={() => addItem(item)}
+                        >
+                          <div className="flex-1">
+                            <p className="text-sm">{(item.product as any)?.name}</p>
+                            <p className="text-xs text-slate-400">
+                              Máx: {item.quantity} {(item.product as any)?.unit}
+                            </p>
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          )}
 
-              return (
-                <div key={item.product_id}
-                  className="border border-slate-200 rounded-lg p-3 space-y-2">
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      id={item.product_id}
-                      checked={isSelected}
-                      onCheckedChange={() => toggleItem(item.product_id)}
-                    />
-                    <label htmlFor={item.product_id}
-                      className="flex-1 cursor-pointer">
-                      <p className="text-sm font-medium text-slate-900">
-                        {(item.product as any)?.name || item.product_id}
+          {/* Lista de itens adicionados */}
+          {returnItems.length === 0 ? (
+            <div className="py-6 text-center border-2 border-dashed border-slate-200 rounded-lg">
+              <p className="text-slate-400 text-sm">Nenhum produto selecionado</p>
+              <p className="text-slate-300 text-xs mt-1">
+                Clique acima para adicionar produtos ao retorno
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {returnItems.map(item => {
+                const isInvalid = item.quantity > item.max_quantity
+                return (
+                  <div key={item.product_id}
+                    className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-900 truncate">
+                        {item.product_name}
                       </p>
                       <p className="text-xs text-slate-400">
-                        Máx: {maxQty} {(item.product as any)?.unit}
+                        Máx: {item.max_quantity} {item.product_unit}
                       </p>
-                    </label>
-                  </div>
-
-                  {isSelected && (
-                    <div className="ml-7 space-y-1">
+                    </div>
+                    <div className="w-28 shrink-0">
                       <Input
                         type="number"
                         min="0"
-                        max={maxQty}
+                        max={item.max_quantity}
                         step="0.01"
-                        placeholder={`Quantidade (máx: ${maxQty})`}
-                        value={quantities[item.product_id] || ''}
-                        onChange={e => handleQuantityChange(item.product_id, e.target.value)}
+                        placeholder="Qtd"
+                        value={item.quantity || ''}
+                        onChange={e => updateQuantity(item.product_id, e.target.value)}
                         className={isInvalid ? 'border-red-500' : ''}
                         autoFocus
                       />
                       {isInvalid && (
-                        <p className="text-xs text-red-500">
-                          Quantidade máxima: {maxQty} {(item.product as any)?.unit}
+                        <p className="text-xs text-red-500 mt-0.5">
+                          Máx: {item.max_quantity}
                         </p>
                       )}
                     </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
+                    <Button variant="ghost" size="sm"
+                      className="text-red-500 hover:text-red-700 shrink-0"
+                      onClick={() => removeItem(item.product_id)}>
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         <DialogFooter>
