@@ -22,6 +22,11 @@ export interface Product {
   creator?: { full_name: string } | null
 }
 
+export interface InitialStock {
+  warehouse_id: string
+  quantity: number
+}
+
 export interface ProductFormData {
   name: string
   description?: string
@@ -32,6 +37,7 @@ export interface ProductFormData {
   category_id?: string | null
   supplier_id?: string | null
   is_active: boolean
+  initial_stocks?: InitialStock[]
 }
 
 export function useProducts() {
@@ -66,11 +72,77 @@ export function useProducts() {
   async function createProduct(data: ProductFormData) {
     if (!company?.id) return false
     try {
-      const { error } = await supabase
+      const { data: product, error } = await supabase
         .from('products')
-        .insert({ ...data, company_id: company.id, created_by: profile?.id } as any)
+        .insert({
+          name: data.name,
+          description: data.description || null,
+          sku: data.sku || null,
+          unit: data.unit,
+          min_stock: data.min_stock,
+          cost_price: data.cost_price || null,
+          category_id: data.category_id || null,
+          supplier_id: data.supplier_id || null,
+          is_active: data.is_active,
+          company_id: company.id,
+          created_by: profile?.id,
+        } as any)
+        .select()
+        .single()
 
       if (error) throw error
+
+      // Processa estoque inicial por almoxarifado
+      if (data.initial_stocks && data.initial_stocks.length > 0) {
+        for (const stock of data.initial_stocks) {
+          if (stock.quantity <= 0) continue
+
+          // Cria ou atualiza registro de estoque
+          await supabase
+            .from('stock')
+            .upsert({
+              company_id: company.id,
+              product_id: product.id,
+              warehouse_id: stock.warehouse_id,
+              quantity: stock.quantity,
+            }, { onConflict: 'product_id,warehouse_id' })
+
+          // Cria movimentação de inventário para rastreabilidade
+          const { data: docNumber } = await supabase
+            .rpc('generate_movement_number', {
+              p_company_id: company.id,
+              p_type: 'inventario',
+            })
+
+          const { data: movement } = await supabase
+            .from('movements')
+            .insert({
+              company_id: company.id,
+              warehouse_id: stock.warehouse_id,
+              type: 'inventario',
+              status: 'aprovado',
+              document_number: docNumber,
+              notes: 'Estoque inicial no cadastro do produto',
+              occurred_at: new Date().toISOString(),
+              requested_by: profile?.id,
+              approved_by: profile?.id,
+            })
+            .select()
+            .single()
+
+          if (movement) {
+            await supabase
+              .from('movement_items')
+              .insert({
+                movement_id: movement.id,
+                product_id: product.id,
+                quantity: stock.quantity,
+                unit_cost: data.cost_price || null,
+              })
+          }
+        }
+      }
+
       toast.success('Produto criado com sucesso!')
       await fetchProducts()
       return true

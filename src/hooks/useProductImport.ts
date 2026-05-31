@@ -23,6 +23,7 @@ export interface ImportRow {
   descricao?: string
   fornecedor?: string
   preco_custo?: number | null
+  initial_stocks?: { warehouse_name: string; quantity: number }[]
   status: 'valido' | 'erro' | 'ignorado'
   erros: string[]
 }
@@ -50,19 +51,28 @@ export function useProductImport() {
   function downloadTemplate() {
     const headers = [
       'codigo', 'nome', 'unidade', 'categoria', 'estoque_minimo',
-      'estoque_inicial', 'descricao', 'fornecedor', 'preco_custo'
+      'descricao', 'fornecedor', 'preco_custo',
+      'almoxarifado_1', 'estoque_inicial_1',
+      'almoxarifado_2', 'estoque_inicial_2',
+      'almoxarifado_3', 'estoque_inicial_3'
     ]
 
     const example = [
       'PRD-001', 'Resma de Papel A4', 'un', 'Materiais de Escritório',
-      '10', '50', 'Papel sulfite A4 75g 500 folhas', 'Distribuidora ABC', '25,90'
+      '10', 'Papel sulfite A4 75g 500 folhas', 'Distribuidora ABC', '25,90',
+      'Almoxarifado Central', '50',
+      'Almoxarifado Filial', '20',
+      '', ''
     ]
 
     const instructions = [
       '* Obrigatório', '* Obrigatório', '* Obrigatório (un/kg/g/l/ml/m/cm/cx/pç/par)',
       '* Obrigatório (cria se não existir)', '* Obrigatório (mínimo 0)',
-      '* Obrigatório (mínimo 0)', 'Opcional', 'Opcional (ignora se não encontrado)',
-      'Opcional (use vírgula ou ponto decimal)'
+      'Opcional', 'Opcional (ignora se não encontrado)',
+      'Opcional (use vírgula ou ponto decimal)',
+      'Opcional (nome do almoxarifado)', 'Opcional (quantidade inicial)',
+      'Opcional (nome do almoxarifado)', 'Opcional (quantidade inicial)',
+      'Opcional (nome do almoxarifado)', 'Opcional (quantidade inicial)',
     ]
 
     const wb = XLSX.utils.book_new()
@@ -81,6 +91,8 @@ export function useProductImport() {
       ['6. Fornecedor: será ignorado se não encontrado no sistema'],
       ['7. Preço de custo: use vírgula ou ponto como separador decimal'],
       ['8. SKU/Código: deve ser único — não pode repetir no arquivo nem no sistema'],
+      ['9. Almoxarifados: até 3 almoxarifados por produto com estoque inicial'],
+      ['10. Estoque inicial: será criado como movimentação de inventário aprovada'],
     ])
     wsInfo['!cols'] = [{ wch: 60 }]
     XLSX.utils.book_append_sheet(wb, wsInfo, 'Instruções')
@@ -140,13 +152,21 @@ export function useProductImport() {
         const unidade = String(row[2] || '').trim().toLowerCase()
         const categoria = String(row[3] || '').trim()
         const estoque_minimo = parseFloat(String(row[4] || '0').replace(',', '.'))
-        const estoque_inicial = parseFloat(String(row[5] || '0').replace(',', '.'))
-        const descricao = String(row[6] || '').trim() || undefined
-        const fornecedor = String(row[7] || '').trim() || undefined
-        const precoCustoRaw = String(row[8] || '').trim()
+        const descricao = String(row[5] || '').trim() || undefined
+        const fornecedor = String(row[6] || '').trim() || undefined
+        const precoCustoRaw = String(row[7] || '').trim()
         const preco_custo = precoCustoRaw
           ? parseFloat(precoCustoRaw.replace(',', '.'))
           : null
+
+        const initial_stocks: { warehouse_name: string; quantity: number }[] = []
+        for (let w = 0; w < 3; w++) {
+          const wName = String(row[8 + w * 2] || '').trim()
+          const wQty = parseFloat(String(row[9 + w * 2] || '0').replace(',', '.'))
+          if (wName && wQty > 0) {
+            initial_stocks.push({ warehouse_name: wName, quantity: wQty })
+          }
+        }
 
         if (!codigo) erros.push('Código/SKU obrigatório')
         if (codigo && skusNoArquivo.has(codigo.toLowerCase()))
@@ -160,8 +180,6 @@ export function useProductImport() {
         if (!categoria) erros.push('Categoria obrigatória')
         if (isNaN(estoque_minimo) || estoque_minimo < 0)
           erros.push('Estoque mínimo inválido (mínimo 0)')
-        if (isNaN(estoque_inicial) || estoque_inicial < 0)
-          erros.push('Estoque inicial inválido (mínimo 0)')
         if (precoCustoRaw && isNaN(preco_custo!))
           erros.push('Preço de custo inválido')
 
@@ -171,9 +189,10 @@ export function useProductImport() {
           linha: i + 2,
           codigo, nome, unidade, categoria,
           estoque_minimo: isNaN(estoque_minimo) ? 0 : estoque_minimo,
-          estoque_inicial: isNaN(estoque_inicial) ? 0 : estoque_inicial,
+          estoque_inicial: 0,
           descricao, fornecedor,
           preco_custo: isNaN(preco_custo!) ? null : preco_custo,
+          initial_stocks,
           status: erros.length > 0 ? 'erro' : 'valido',
           erros,
         })
@@ -273,7 +292,72 @@ export function useProductImport() {
 
           if (productError) throw new Error(productError.message)
 
-          // TODO Fase 6: criar movimentação de entrada para estoque_inicial
+          // Processa estoque inicial por almoxarifado
+          if (row.initial_stocks && row.initial_stocks.length > 0) {
+            const { data: newProduct } = await supabase
+              .from('products')
+              .select('id')
+              .eq('sku', row.codigo)
+              .eq('company_id', company.id)
+              .single()
+
+            if (newProduct) {
+              for (const stockItem of row.initial_stocks) {
+                // Busca almoxarifado pelo nome
+                const { data: warehouse } = await supabase
+                  .from('warehouses')
+                  .select('id')
+                  .eq('company_id', company.id)
+                  .ilike('name', stockItem.warehouse_name)
+                  .single()
+
+                if (warehouse) {
+                  await supabase
+                    .from('stock')
+                    .upsert({
+                      company_id: company.id,
+                      product_id: newProduct.id,
+                      warehouse_id: warehouse.id,
+                      quantity: stockItem.quantity,
+                    }, { onConflict: 'product_id,warehouse_id' })
+
+                  // Cria movimentação de inventário
+                  const { data: docNumber } = await supabase
+                    .rpc('generate_movement_number', {
+                      p_company_id: company.id,
+                      p_type: 'inventario',
+                    })
+
+                  const { data: movement } = await supabase
+                    .from('movements')
+                    .insert({
+                      company_id: company.id,
+                      warehouse_id: warehouse.id,
+                      type: 'inventario',
+                      status: 'aprovado',
+                      document_number: docNumber,
+                      notes: 'Estoque inicial via importação em massa',
+                      occurred_at: new Date().toISOString(),
+                      requested_by: profile.id,
+                      approved_by: profile.id,
+                    })
+                    .select()
+                    .single()
+
+                  if (movement) {
+                    await supabase
+                      .from('movement_items')
+                      .insert({
+                        movement_id: movement.id,
+                        product_id: newProduct.id,
+                        quantity: stockItem.quantity,
+                      })
+                  }
+                }
+              }
+            }
+          }
+
           importedCount++
         } catch (err: any) {
           errorDetails.push({

@@ -5,7 +5,9 @@ import { z } from 'zod'
 import { Product, ProductFormData } from '@/hooks/useProducts'
 import { useCategories } from '@/hooks/useCategories'
 import { useSuppliers } from '@/hooks/useSuppliers'
+import { useWarehouses } from '@/hooks/useWarehouses'
 import { useFeatureFlag } from '@/hooks/useFeatureFlag'
+import { InitialStock } from '@/hooks/useProducts'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle
 } from '@/components/ui/sheet'
@@ -25,7 +27,7 @@ import { SupplierModal } from '@/components/products/SupplierModal'
 import { ImageUpload } from '@/components/products/ImageUpload'
 import { Category } from '@/hooks/useCategories'
 import { Supplier } from '@/hooks/useSuppliers'
-import { Plus } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 
 const schema = z.object({
   name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
@@ -61,6 +63,20 @@ export function ProductDrawer({ open, onClose, onSubmit, product, categories, on
   const [categoryModalOpen, setCategoryModalOpen] = useState(false)
   const [supplierModalOpen, setSupplierModalOpen] = useState(false)
   const { enabled: canUploadImage } = useFeatureFlag('product_images')
+  const { warehouses } = useWarehouses()
+  const [initialStocks, setInitialStocks] = useState<InitialStock[]>([])
+
+  function addStock() {
+    setInitialStocks(prev => [...prev, { warehouse_id: '', quantity: 0 }])
+  }
+
+  function removeStock(index: number) {
+    setInitialStocks(prev => prev.filter((_, i) => i !== index))
+  }
+
+  function updateStock(index: number, field: keyof InitialStock, value: any) {
+    setInitialStocks(prev => prev.map((s, i) => i === index ? { ...s, [field]: value } : s))
+  }
 
   // Ref para guardar o nome do último item criado inline
   const lastCreatedCategory = useRef<string | null>(null)
@@ -87,6 +103,7 @@ export function ProductDrawer({ open, onClose, onSubmit, product, categories, on
       })
     } else {
       reset({ name: '', description: '', sku: '', unit: 'un', min_stock: 0, cost_price: null, category_id: '', supplier_id: null, image_url: null, is_active: true })
+      setInitialStocks([])
     }
   }, [product, open, reset])
 
@@ -119,6 +136,7 @@ export function ProductDrawer({ open, onClose, onSubmit, product, categories, on
       category_id: data.category_id || null,
       supplier_id: data.supplier_id || null,
       cost_price: data.cost_price || null,
+      initial_stocks: initialStocks.filter(s => s.warehouse_id && s.quantity > 0),
     })
     if (success) onClose()
   }
@@ -254,6 +272,56 @@ export function ProductDrawer({ open, onClose, onSubmit, product, categories, on
                 disabled={!canUploadImage}
               />
             </div>
+
+            {!isEditing && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Estoque inicial por almoxarifado</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={addStock}>
+                    <Plus size={14} className="mr-1" /> Adicionar
+                  </Button>
+                </div>
+                {initialStocks.length === 0 ? (
+                  <p className="text-xs text-slate-400 text-center py-3 border-2 border-dashed border-slate-200 rounded-lg">
+                    Clique em "Adicionar" para definir o estoque inicial por almoxarifado
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {initialStocks.map((stock, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <select
+                            className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm"
+                            value={stock.warehouse_id}
+                            onChange={e => updateStock(index, 'warehouse_id', e.target.value)}
+                          >
+                            <option value="">Selecione o almoxarifado</option>
+                            {warehouses.filter(w => w.is_active).map(w => (
+                              <option key={w.id} value={w.id}>{w.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="w-24">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="Qtd"
+                            value={stock.quantity || ''}
+                            onChange={e => updateStock(index, 'quantity', parseFloat(e.target.value) || 0)}
+                          />
+                        </div>
+                        <Button type="button" variant="ghost" size="sm"
+                          className="text-red-500 hover:text-red-700 shrink-0"
+                          onClick={() => removeStock(index)}>
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Status */}
             <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
