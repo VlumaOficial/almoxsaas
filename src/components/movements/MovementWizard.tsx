@@ -17,15 +17,17 @@ import { Product } from '@/hooks/useProducts'
 import { cn } from '@/lib/utils'
 import { Check } from 'lucide-react'
 
-const PROJECT_REQUIRED_TYPES = ["saida", "transferencia", "retorno"]
+const PROJECT_REQUIRED_TYPES = ['saida', 'transferencia', 'retorno']
 
 const schema = z.object({
-  type: z.enum(["entrada", "saida", "transferencia", "ajuste", "inventario", "retorno"]),
-  warehouse_id: z.string().min(1, "Almoxarifado obrigatorio"),
+  type: z.enum(['entrada', 'saida', 'transferencia', 'ajuste', 'inventario', 'retorno']),
+  transfer_subtype: z.enum(['almoxarifado', 'projeto']).nullable().optional(),
+  warehouse_id: z.string().min(1, 'Almoxarifado obrigatorio'),
   warehouse_dest_id: z.string().nullable().optional(),
   project_id: z.string().nullable().optional(),
+  project_dest_id: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
-  occurred_at: z.string().min(1, "Data obrigatoria"),
+  occurred_at: z.string().min(1, 'Data obrigatoria'),
   items: z.array(z.object({
     product_id: z.string(),
     quantity: z.number().positive(),
@@ -37,15 +39,23 @@ const schema = z.object({
       sku: z.string().nullable(),
     }).optional(),
     current_stock: z.number().optional(),
-  })).min(1, "Adicione pelo menos um produto"),
+  })).min(1, 'Adicione pelo menos um produto'),
 }).refine(data => {
   if (PROJECT_REQUIRED_TYPES.includes(data.type) && !data.project_id) return false
   return true
-}, { message: "Projeto obrigatorio para este tipo", path: ["project_id"] })
+}, { message: 'Projeto obrigatorio para este tipo', path: ['project_id'] })
 .refine(data => {
-  if (data.type === "transferencia" && !data.warehouse_dest_id) return false
+  if (data.type === 'transferencia' && !data.transfer_subtype) return false
   return true
-}, { message: "Almoxarifado de destino obrigatorio", path: ["warehouse_dest_id"] })
+}, { message: 'Selecione o tipo de transferencia', path: ['transfer_subtype'] })
+.refine(data => {
+  if (data.type === 'transferencia' && data.transfer_subtype === 'almoxarifado' && !data.warehouse_dest_id) return false
+  return true
+}, { message: 'Almoxarifado de destino obrigatorio', path: ['warehouse_dest_id'] })
+.refine(data => {
+  if (data.type === 'transferencia' && data.transfer_subtype === 'projeto' && !data.project_dest_id) return false
+  return true
+}, { message: 'Projeto de destino obrigatorio', path: ['project_dest_id'] })
 
 interface MovementWizardProps {
   open: boolean
@@ -57,7 +67,7 @@ interface MovementWizardProps {
   stockMap: Record<string, number>
 }
 
-const STEPS = ["Tipo e Local", "Produtos", "Revisao"]
+const STEPS = ['Tipo e Projeto', 'Almoxarifado e Produtos', 'Revisao']
 
 export function MovementWizard({
   open, onClose, onSuccess,
@@ -68,15 +78,17 @@ export function MovementWizard({
   const [currentStep, setCurrentStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
 
-  const isManager = ["manager", "owner", "super_admin"].includes(profile?.role || "")
+  const isManager = ['manager', 'owner', 'super_admin'].includes(profile?.role || '')
 
   const form = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
-      type: "entrada",
-      warehouse_id: "",
+      type: 'entrada',
+      transfer_subtype: null,
+      warehouse_id: '',
       warehouse_dest_id: null,
       project_id: null,
+      project_dest_id: null,
       notes: null,
       occurred_at: new Date().toISOString().slice(0, 16),
       items: [],
@@ -91,14 +103,24 @@ export function MovementWizard({
 
   async function handleNext() {
     let fieldsToValidate: string[] = []
+
     if (currentStep === 0) {
-      fieldsToValidate = ["type", "warehouse_id", "occurred_at", "project_id"]
-      if (form.watch("type") === "transferencia") {
-        fieldsToValidate.push("warehouse_dest_id")
+      fieldsToValidate = ['type', 'occurred_at', 'project_id']
+      if (form.watch('type') === 'transferencia') {
+        fieldsToValidate.push('transfer_subtype')
       }
     } else if (currentStep === 1) {
-      fieldsToValidate = ["items"]
+      fieldsToValidate = ['warehouse_id', 'items']
+      const type = form.watch('type')
+      const subtype = form.watch('transfer_subtype')
+      if (type === 'transferencia' && subtype === 'almoxarifado') {
+        fieldsToValidate.push('warehouse_dest_id')
+      }
+      if (type === 'transferencia' && subtype === 'projeto') {
+        fieldsToValidate.push('project_dest_id')
+      }
     }
+
     const valid = await form.trigger(fieldsToValidate as any)
     if (valid) setCurrentStep(s => s + 1)
   }
@@ -112,6 +134,8 @@ export function MovementWizard({
         warehouse_id: values.warehouse_id,
         warehouse_dest_id: values.warehouse_dest_id || null,
         project_id: values.project_id || null,
+        project_dest_id: values.project_dest_id || null,
+        transfer_subtype: values.transfer_subtype || null,
         notes: values.notes || null,
         occurred_at: new Date(values.occurred_at).toISOString(),
         items: values.items.map((item: any) => ({
@@ -121,6 +145,7 @@ export function MovementWizard({
           notes: item.notes || null,
         })),
       }
+
       const result = await createMovement(data)
       if (result) {
         handleClose()
@@ -142,20 +167,20 @@ export function MovementWizard({
           {STEPS.map((step, i) => (
             <div key={i} className="flex items-center gap-2 flex-1">
               <div className={cn(
-                "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
-                i < currentStep ? "bg-blue-800 text-white" :
-                i === currentStep ? "bg-blue-800 text-white" :
-                "bg-slate-200 text-slate-500"
+                'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0',
+                i < currentStep ? 'bg-blue-800 text-white' :
+                i === currentStep ? 'bg-blue-800 text-white' :
+                'bg-slate-200 text-slate-500'
               )}>
                 {i < currentStep ? <Check size={14} /> : i + 1}
               </div>
-              <span className={cn("text-xs hidden sm:block",
-                i === currentStep ? "text-blue-800 font-medium" : "text-slate-400")}>
+              <span className={cn('text-xs hidden sm:block',
+                i === currentStep ? 'text-blue-800 font-medium' : 'text-slate-400')}>
                 {step}
               </span>
               {i < STEPS.length - 1 && (
-                <div className={cn("flex-1 h-0.5",
-                  i < currentStep ? "bg-blue-800" : "bg-slate-200")} />
+                <div className={cn('flex-1 h-0.5',
+                  i < currentStep ? 'bg-blue-800' : 'bg-slate-200')} />
               )}
             </div>
           ))}
@@ -165,7 +190,6 @@ export function MovementWizard({
           {currentStep === 0 && (
             <MovementWizardStep1
               form={form}
-              warehouses={warehouses}
               projects={projects}
             />
           )}
@@ -174,6 +198,8 @@ export function MovementWizard({
               form={form}
               products={products}
               stockMap={stockMap}
+              warehouses={warehouses}
+              projects={projects}
             />
           )}
           {currentStep === 2 && (
@@ -189,7 +215,7 @@ export function MovementWizard({
         <div className="flex gap-3 pt-2 border-t border-slate-100">
           <Button type="button" variant="outline"
             onClick={currentStep === 0 ? handleClose : () => setCurrentStep(s => s - 1)}>
-            {currentStep === 0 ? "Cancelar" : "Voltar"}
+            {currentStep === 0 ? 'Cancelar' : 'Voltar'}
           </Button>
           <div className="flex-1" />
           {currentStep < STEPS.length - 1 ? (
@@ -200,7 +226,7 @@ export function MovementWizard({
           ) : (
             <Button type="button" className="bg-blue-800 hover:bg-blue-900"
               onClick={handleSubmit} disabled={submitting}>
-              {submitting ? "Salvando..." : "Confirmar movimentacao"}
+              {submitting ? 'Salvando...' : 'Confirmar movimentacao'}
             </Button>
           )}
         </div>

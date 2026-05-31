@@ -45,6 +45,8 @@ export interface MovementFormData {
   warehouse_id: string
   warehouse_dest_id?: string | null
   project_id?: string | null
+  project_dest_id?: string | null
+  transfer_subtype?: string | null
   origin_movement_id?: string | null
   notes?: string | null
   occurred_at: string
