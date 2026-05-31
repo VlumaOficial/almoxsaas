@@ -152,6 +152,8 @@ export function useStock() {
         }
       })
 
+      if (import.meta.env.DEV) console.log('[useStock] byWarehouse sample:', byWarehouse.slice(0, 3))
+
       setStockItems(consolidated)
       setStockByWarehouse(byWarehouse)
       setSummary({
