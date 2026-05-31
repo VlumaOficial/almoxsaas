@@ -88,7 +88,7 @@ export function MovementWizardStep2({ form, products, stockMap }: Step2Props) {
                     {activeProducts
                       .filter(p => !addedProductIds.has(p.id))
                       .map(p => (
-                        <CommandItem key={p.id} value={p.name}
+                        <CommandItem key={p.id} value={`${p.name} ${p.sku || ''}`}
                           onSelect={() => {
                             setSelectedProductId(p.id)
                             setProductOpen(false)

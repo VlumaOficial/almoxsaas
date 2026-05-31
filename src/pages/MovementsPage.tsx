@@ -33,17 +33,19 @@ export default function MovementsPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [stockMap, setStockMap] = useState<Record<string, number>>({})
 
-  useEffect(() => {
+  async function loadStockMap() {
     if (!company?.id) return
-    supabase
-      .from("stock")
-      .select("product_id, quantity")
-      .eq("company_id", company.id)
-      .then(({ data }) => {
-        const map: Record<string, number> = {}
-        ;(data || []).forEach((s: any) => { map[s.product_id] = s.quantity })
-        setStockMap(map)
-      })
+    const { data } = await supabase
+      .from('stock')
+      .select('product_id, quantity')
+      .eq('company_id', company.id)
+    const map: Record<string, number> = {}
+    ;(data || []).forEach((s: any) => { map[s.product_id] = s.quantity })
+    setStockMap(map)
+  }
+
+  useEffect(() => {
+    loadStockMap()
   }, [company?.id])
 
   const filteredMovements = useMemo(() => {
@@ -96,7 +98,10 @@ export default function MovementsPage() {
       <MovementWizard
         open={wizardOpen}
         onClose={() => setWizardOpen(false)}
-        onSuccess={() => fetchMovements()}
+        onSuccess={() => {
+          fetchMovements()
+          loadStockMap()
+        }}
         warehouses={warehouses}
         projects={projects}
         products={products}
