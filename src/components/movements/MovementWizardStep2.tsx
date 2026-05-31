@@ -42,6 +42,7 @@ export function MovementWizardStep2({ form, products, stockMap, warehouses, proj
   const [selectedProductId, setSelectedProductId] = useState('')
   const [quantity, setQuantity] = useState('')
   const [warehouseStockMap, setWarehouseStockMap] = useState<Record<string, number>>({})
+  const [loadingStock, setLoadingStock] = useState(false)
 
   const isTransfer = type === 'transferencia'
   const isTransferBetweenWarehouses = isTransfer && transferSubtype === 'almoxarifado'
@@ -54,6 +55,11 @@ export function MovementWizardStep2({ form, products, stockMap, warehouses, proj
   // Carrega estoque do almoxarifado selecionado
   useEffect(() => {
     if (!warehouseId || !company?.id) return
+    setLoadingStock(true)
+    if (items.length > 0) {
+      if (import.meta.env.DEV) console.log('[Step2] Almoxarifado trocado, limpando itens')
+    }
+    setValue('items', [])
     supabase
       .from('stock')
       .select('product_id, quantity')
@@ -63,7 +69,7 @@ export function MovementWizardStep2({ form, products, stockMap, warehouses, proj
         const map: Record<string, number> = {}
         ;(data || []).forEach((s: any) => { map[s.product_id] = s.quantity })
         setWarehouseStockMap(map)
-        setValue('items', []) // limpa itens ao mudar almoxarifado
+        setLoadingStock(false)
       })
   }, [warehouseId, company?.id])
 
@@ -75,6 +81,14 @@ export function MovementWizardStep2({ form, products, stockMap, warehouses, proj
     }
     return true
   })
+
+  const INTEGER_UNITS = ['un', 'cx', 'pç', 'par', 'rolo', 'pacote']
+
+  function getQuantityStep(productId: string): string {
+    const product = products.find(p => p.id === productId)
+    if (!product) return '1'
+    return INTEGER_UNITS.includes(product.unit) ? '1' : '0.01'
+  }
 
   const addedProductIds = new Set(items.map((i: any) => i.product_id))
 
@@ -211,7 +225,11 @@ export function MovementWizardStep2({ form, products, stockMap, warehouses, proj
       )}
 
       {/* Seletor de produto — só aparece após escolher almoxarifado */}
-      {warehouseId ? (
+      {warehouseId && loadingStock ? (
+        <div className="py-6 text-center text-slate-400 text-sm">
+          Carregando produtos do almoxarifado...
+        </div>
+      ) : warehouseId ? (
         <>
           <div className="flex gap-3 items-end">
             <div className="flex-1 space-y-1.5">
@@ -265,7 +283,9 @@ export function MovementWizardStep2({ form, products, stockMap, warehouses, proj
             <div className="w-28 space-y-1.5">
               <Label>Quantidade</Label>
               <Input
-                type="number" min="0.01" step="0.01"
+                type="number"
+                min="1"
+                step={getQuantityStep(selectedProductId)}
                 placeholder="0"
                 value={quantity}
                 onChange={e => setQuantity(e.target.value)}
