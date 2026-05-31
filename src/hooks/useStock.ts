@@ -170,12 +170,24 @@ export function useStock() {
   async function fetchProductHistory(productId: string): Promise<StockMovementHistory[]> {
     const { data } = await supabase
       .from("movement_items")
-      .select("quantity, movement:movements(id, document_number, type, status, occurred_at, warehouse:warehouses(name), requested_by_profile:profiles!movements_requested_by_fkey(full_name))")
+      .select(`
+        quantity,
+        movement:movements(
+          id, document_number, type, status, occurred_at,
+          warehouse:warehouses(name),
+          requested_by_profile:profiles!movements_requested_by_fkey(full_name)
+        )
+      `)
       .eq("product_id", productId)
       .limit(50)
 
+    if (import.meta.env.DEV) console.log("[fetchProductHistory] data:", data)
+
     return (data || [])
       .filter((item: any) => item.movement?.status === "aprovado")
+      .sort((a: any, b: any) =>
+        new Date(b.movement.occurred_at).getTime() - new Date(a.movement.occurred_at).getTime()
+      )
       .map((item: any) => ({
         id: item.movement.id,
         document_number: item.movement.document_number,
