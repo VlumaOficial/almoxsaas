@@ -92,13 +92,18 @@ export function useProducts() {
 
       if (error) throw error
 
+      if (import.meta.env.DEV) console.log('[createProduct] produto criado:', product)
+      if (import.meta.env.DEV) console.log('[createProduct] initial_stocks recebidos:', data.initial_stocks)
+
       // Processa estoque inicial por almoxarifado
       if (data.initial_stocks && data.initial_stocks.length > 0) {
+        if (import.meta.env.DEV) console.log('[createProduct] processando estoque inicial...')
         for (const stock of data.initial_stocks) {
+          if (import.meta.env.DEV) console.log('[createProduct] stock item:', stock)
           if (stock.quantity <= 0) continue
 
           // Cria ou atualiza registro de estoque
-          await supabase
+          const { error: stockError } = await supabase
             .from('stock')
             .upsert({
               company_id: company.id,
@@ -106,6 +111,7 @@ export function useProducts() {
               warehouse_id: stock.warehouse_id,
               quantity: stock.quantity,
             }, { onConflict: 'product_id,warehouse_id' })
+          if (import.meta.env.DEV) console.log('[createProduct] stockError:', stockError)
 
           // Cria movimentação de inventário para rastreabilidade
           const { data: docNumber } = await supabase
