@@ -23,6 +23,7 @@ import SuppliersPage from './pages/SuppliersPage'
 import PlanosPage from './pages/PlanosPage'
 import AdminPage from './pages/AdminPage'
 import MovementsPage from './pages/MovementsPage'
+import StockPage from './pages/StockPage'
 import ProjectsPage from './pages/ProjectsPage'
 
 // Placeholders para fases futuras
@@ -61,7 +62,7 @@ export default function App() {
                 <Route path="/dashboard"     element={<DashboardPage />} />
                 <Route path="/produtos"      element={<ProductsPage />} />
                 <Route path="/movimentacoes" element={<MovementsPage />} />
-                <Route path="/estoque"       element={<PlaceholderPage name="Estoque" />} />
+                <Route path="/estoque" element={<StockPage />} />
                 <Route path="/almoxarifados" element={<WarehousesPage />} />
                 <Route path="/categorias"    element={<CategoriesPage />} />
                 <Route path="/fornecedores"  element={<SuppliersPage />} />
