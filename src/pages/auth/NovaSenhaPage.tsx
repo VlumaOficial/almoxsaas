@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -21,6 +21,44 @@ export default function NovaSenhaPage() {
   const { register, handleSubmit, formState: { errors } } = useForm<NovaSenhaForm>({
     resolver: zodResolver(novaSenhaSchema),
   })
+
+  useEffect(() => {
+    // Formato novo: ?token_hash=...&type=recovery
+    const params = new URLSearchParams(window.location.search)
+    const tokenHash = params.get('token_hash')
+    const type = params.get('type')
+
+    if (tokenHash && type === 'recovery') {
+      supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: 'recovery',
+      }).then(({ error }) => {
+        if (error) {
+          setError('Link inválido ou expirado. Solicite um novo link de recuperação.')
+        }
+      })
+      return
+    }
+
+    // Formato antigo: #access_token=...
+    const hash = window.location.hash
+    if (hash) {
+      const hashParams = new URLSearchParams(hash.substring(1))
+      const accessToken = hashParams.get('access_token')
+      const refreshToken = hashParams.get('refresh_token')
+
+      if (accessToken) {
+        supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken || '',
+        }).then(({ error }) => {
+          if (error) {
+            setError('Link inválido ou expirado. Solicite um novo link de recuperação.')
+          }
+        })
+      }
+    }
+  }, [])
 
   async function onSubmit(data: NovaSenhaForm) {
     setLoading(true)
