@@ -49,7 +49,11 @@ export default function MovementsPage() {
   const filteredMovements = useMemo(() => {
     return movements.filter(m => {
       const matchSearch = !search ||
-        m.document_number?.toLowerCase().includes(search.toLowerCase())
+        m.document_number?.toLowerCase().includes(search.toLowerCase()) ||
+        m.movement_items?.some(item =>
+          (item.product as any)?.name?.toLowerCase().includes(search.toLowerCase()) ||
+          (item.product as any)?.sku?.toLowerCase().includes(search.toLowerCase())
+        )
       const matchType = typeFilter === "all" || m.type === typeFilter
       const matchStatus = statusFilter === "all" || m.status === statusFilter
       return matchSearch && matchType && matchStatus

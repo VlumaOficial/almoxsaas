@@ -24,7 +24,7 @@ export function MovementFilters({
       <div className="relative flex-1">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <Input
-          placeholder="Buscar por numero do documento..."
+          placeholder="Buscar por documento ou produto..."
           value={search}
           onChange={e => onSearchChange(e.target.value)}
           className="pl-9"
