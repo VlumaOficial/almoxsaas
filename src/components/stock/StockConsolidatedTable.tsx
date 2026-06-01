@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { StockItem } from "@/hooks/useStock"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -15,12 +15,29 @@ interface StockConsolidatedTableProps {
   items: StockItem[]
   loading: boolean
   onViewHistory: (productId: string, productName: string) => void
+  warehouseFilter?: string
 }
 
 export function StockConsolidatedTable({
-  items, loading, onViewHistory
+  items, loading, onViewHistory, warehouseFilter
 }: StockConsolidatedTableProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
+
+  // Quando filtro de almoxarifado ativo, expandir automaticamente
+  useEffect(() => {
+    if (warehouseFilter && warehouseFilter !== 'all') {
+      // Expandir todos quando filtro de almoxarifado ativo
+      setExpandedId('all')
+    } else {
+      setExpandedId(null)
+    }
+  }, [warehouseFilter])
+
+  // Na linha de expansão, filtrar por almoxarifado se filtro ativo
+  const getVisibleWarehouses = (item: StockItem) => {
+    if (!warehouseFilter || warehouseFilter === 'all') return item.warehouses
+    return item.warehouses.filter(w => w.warehouse_id === warehouseFilter)
+  }
 
   if (loading) {
     return (
@@ -56,7 +73,8 @@ export function StockConsolidatedTable({
             <tbody>
               {items.map(item => {
                 const statusConf = STATUS_CONFIG[item.status]
-                const isExpanded = expandedId === item.product_id
+                const isExpanded = expandedId === item.product_id || expandedId === 'all'
+                const visibleWarehouses = getVisibleWarehouses(item)
                 const rowBg = item.status === "zerado"
                   ? "bg-red-50"
                   : item.status === "baixo"
@@ -71,7 +89,7 @@ export function StockConsolidatedTable({
                       onClick={() => setExpandedId(isExpanded ? null : item.product_id)}
                     >
                       <td className="px-3 py-3 text-slate-400">
-                        {item.warehouses.length > 0
+                        {visibleWarehouses.length > 0
                           ? isExpanded
                             ? <ChevronDown size={14} />
                             : <ChevronRight size={14} />
@@ -115,7 +133,7 @@ export function StockConsolidatedTable({
                         </div>
                       </td>
                     </tr>
-                    {isExpanded && item.warehouses.map(w => (
+                    {isExpanded && visibleWarehouses.map(w => (
                       <tr key={`${item.product_id}-${w.warehouse_id}`}
                         className="border-b border-slate-100 bg-slate-50">
                         <td className="px-3 py-2"></td>

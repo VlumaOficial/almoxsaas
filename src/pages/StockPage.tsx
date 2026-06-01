@@ -4,15 +4,10 @@ import { useWarehouses } from "@/hooks/useWarehouses"
 import { StockSummaryCards } from "@/components/stock/StockSummaryCards"
 import { StockFilters } from "@/components/stock/StockFilters"
 import { StockConsolidatedTable } from "@/components/stock/StockConsolidatedTable"
-import { StockByWarehouseTable } from "@/components/stock/StockByWarehouseTable"
 import { StockHistoryModal } from "@/components/stock/StockHistoryModal"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function StockPage() {
-  const {
-    stockItems, stockByWarehouse, summary, loading
-  } = useStock()
-
+  const { stockItems, summary, loading } = useStock()
   const { warehouses } = useWarehouses()
 
   const [search, setSearch] = useState("")
@@ -33,37 +28,24 @@ export default function StockPage() {
     setHistoryProductName(productName)
   }
 
-  const filteredConsolidated = useMemo(() => {
+  const filteredItems = useMemo(() => {
     return stockItems.filter(item => {
       const matchSearch = !search ||
         item.product_name.toLowerCase().includes(search.toLowerCase()) ||
         item.product_sku?.toLowerCase().includes(search.toLowerCase())
       const matchStatus = statusFilter === "all" || item.status === statusFilter
-      return matchSearch && matchStatus
-    })
-  }, [stockItems, search, statusFilter])
-
-  const filteredByWarehouse = useMemo(() => {
-    console.log('[StockPage] warehouseFilter:', warehouseFilter)
-    console.log('[StockPage] stockByWarehouse total:', stockByWarehouse.length)
-    return stockByWarehouse.filter(item => {
-      const matchSearch = !search ||
-        item.product_name.toLowerCase().includes(search.toLowerCase()) ||
-        item.product_sku?.toLowerCase().includes(search.toLowerCase())
-      const matchStatus = statusFilter === 'all' || item.status === statusFilter
-      const matchWarehouse = warehouseFilter === 'all' ||
-        (warehouseFilter !== 'all' && item.warehouse_id === warehouseFilter)
-      console.log('[StockPage] item:', item.warehouse_id, 'filter:', warehouseFilter, 'match:', matchWarehouse)
+      const matchWarehouse = warehouseFilter === "all" ||
+        item.warehouses.some(w => w.warehouse_id === warehouseFilter)
       return matchSearch && matchStatus && matchWarehouse
     })
-  }, [stockByWarehouse, search, statusFilter, warehouseFilter])
+  }, [stockItems, search, statusFilter, warehouseFilter])
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold text-slate-900">Estoque</h2>
         <p className="text-slate-500 text-sm mt-1">
-          Visao consolidada e por almoxarifado
+          {stockItems.length} produto{stockItems.length !== 1 ? "s" : ""} cadastrado{stockItems.length !== 1 ? "s" : ""}
         </p>
       </div>
 
@@ -84,32 +66,12 @@ export default function StockPage() {
         warehouses={warehouses}
       />
 
-      <Tabs defaultValue="consolidado">
-        <TabsList>
-          <TabsTrigger value="consolidado">
-            Consolidado ({filteredConsolidated.length})
-          </TabsTrigger>
-          <TabsTrigger value="por-almoxarifado">
-            Por almoxarifado ({filteredByWarehouse.length})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="consolidado" className="mt-4">
-          <StockConsolidatedTable
-            items={filteredConsolidated}
-            loading={loading}
-            onViewHistory={handleViewHistory}
-          />
-        </TabsContent>
-
-        <TabsContent value="por-almoxarifado" className="mt-4">
-          <StockByWarehouseTable
-            items={filteredByWarehouse}
-            loading={loading}
-            onViewHistory={handleViewHistory}
-          />
-        </TabsContent>
-      </Tabs>
+      <StockConsolidatedTable
+        items={filteredItems}
+        loading={loading}
+        onViewHistory={handleViewHistory}
+        warehouseFilter={warehouseFilter}
+      />
 
       <StockHistoryModal
         open={!!historyProductId}
