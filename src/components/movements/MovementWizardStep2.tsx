@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { UseFormReturn } from 'react-hook-form'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -69,16 +69,29 @@ export function MovementWizardStep2({ form, products, stockMap, warehouses, proj
       })
   }, [warehouseId, company?.id])
 
+  const addedProductIds = new Set(items.map((i: any) => i.product_id))
+
   // Filtra produtos com estoque no almoxarifado para saidas e transferencias
-  const availableProducts = products.filter(p => {
-    if (!p.is_active) return false
-    if (!warehouseId) return false
-    if (loadingStock) return false
-    if (['saida', 'transferencia'].includes(type)) {
-      return (warehouseStockMap[p.id] || 0) > 0
-    }
-    return true
-  })
+  const availableProducts = useMemo(() => {
+    if (!warehouseId || loadingStock) return []
+
+    return products.filter(p => {
+      if (!p.is_active) return false
+      if (addedProductIds.has(p.id)) return false
+      
+      // Produto deve ter registro neste almoxarifado
+      const hasRecord = p.id in warehouseStockMap
+      if (!hasRecord) return false
+
+      // Para saída e transferência exige estoque > 0
+      if (['saida', 'transferencia'].includes(type)) {
+        return (warehouseStockMap[p.id] || 0) > 0
+      }
+
+      // Entrada, ajuste, inventário: qualquer quantidade inclusive 0
+      return true
+    })
+  }, [products, warehouseId, loadingStock, warehouseStockMap, type, addedProductIds])
 
   const INTEGER_UNITS = ['un', 'cx', 'pç', 'par', 'rolo', 'pacote']
 
@@ -87,8 +100,6 @@ export function MovementWizardStep2({ form, products, stockMap, warehouses, proj
     if (!product) return '1'
     return INTEGER_UNITS.includes(product.unit) ? '1' : '0.01'
   }
-
-  const addedProductIds = new Set(items.map((i: any) => i.product_id))
 
   function addItem() {
     if (!selectedProductId || !quantity || Number(quantity) <= 0) return
