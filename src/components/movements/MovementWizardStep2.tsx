@@ -56,10 +56,6 @@ export function MovementWizardStep2({ form, products, stockMap, warehouses, proj
   useEffect(() => {
     if (!warehouseId || !company?.id) return
     setLoadingStock(true)
-    if (items.length > 0) {
-      if (import.meta.env.DEV) console.log('[Step2] Almoxarifado trocado, limpando itens')
-    }
-    setValue('items', [])
     supabase
       .from('stock')
       .select('product_id, quantity')
@@ -76,6 +72,8 @@ export function MovementWizardStep2({ form, products, stockMap, warehouses, proj
   // Filtra produtos com estoque no almoxarifado para saidas e transferencias
   const availableProducts = products.filter(p => {
     if (!p.is_active) return false
+    if (!warehouseId) return false
+    if (loadingStock) return false
     if (['saida', 'transferencia'].includes(type)) {
       return (warehouseStockMap[p.id] || 0) > 0
     }
@@ -104,6 +102,7 @@ export function MovementWizardStep2({ form, products, stockMap, warehouses, proj
       quantity: Number(quantity),
       unit_cost: product.cost_price || null,
       notes: null,
+      warehouse_id: warehouseId,
       product: { name: product.name, unit: product.unit, sku: product.sku },
       current_stock: currentStock,
     }
@@ -326,6 +325,7 @@ export function MovementWizardStep2({ form, products, stockMap, warehouses, proj
                           <span className="text-xs text-slate-400">{item.product.sku}</span>
                         )}
                         <span className="text-xs text-slate-400">
+                          {warehouses.find(w => w.id === item.warehouse_id)?.name || '-'} ·
                           Estoque: {currentStock} {item.product?.unit}
                         </span>
                       </div>
