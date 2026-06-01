@@ -55,6 +55,7 @@ export interface MovementFormData {
     quantity: number
     unit_cost?: number | null
     notes?: string | null
+    warehouse_id?: string | null
   }[]
 }
 
@@ -266,6 +267,7 @@ export function useMovements() {
         quantity: item.quantity,
         unit_cost: item.unit_cost || null,
         notes: item.notes || null,
+        warehouse_id: item.warehouse_id || null,
       }))
 
       const { error: itemsError } = await supabase
@@ -276,13 +278,16 @@ export function useMovements() {
 
       // Atualiza estoque para movimentações aprovadas
       if (initialStatus === 'aprovado') {
-        await updateStock(
-          data.type,
-          company.id,
-          data.warehouse_id,
-          data.warehouse_dest_id || null,
-          data.items
-        )
+        for (const item of data.items) {
+          const itemWarehouseId = (item as any).warehouse_id || data.warehouse_id
+          await updateStock(
+            data.type,
+            company.id,
+            itemWarehouseId,
+            data.warehouse_dest_id || null,
+            [{ product_id: item.product_id, quantity: item.quantity }]
+          )
+        }
       }
 
       toast.success(
